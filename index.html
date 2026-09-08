@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Web File Editor v1</title>
+<style>
+*{box-sizing:border-box}body{margin:0;height:100vh;display:flex;flex-direction:column;font-family:system-ui,sans-serif;background:#f5f6f8}
+header{padding:8px;display:flex;gap:6px;align-items:center;flex-wrap:wrap;background:#202124;color:white}
+header strong{margin-right:auto}button,input{font:inherit}button{padding:7px 10px;border:1px solid #aaa;border-radius:7px;background:white}
+#filename{width:180px;padding:7px;border-radius:7px;border:1px solid #aaa}
+#status{font-size:.85rem}
+main{flex:1;min-height:0;display:grid;grid-template-columns:210px 1fr 1fr}
+#files{padding:8px;background:white;border-right:1px solid #ccc;color:#666}
+#work{min-width:0;display:flex;flex-direction:column;background:#111}
+#toolbar{padding:6px;display:flex;gap:4px;flex-wrap:wrap;background:#252525}
+#toolbar button{padding:5px 8px}
+#source{flex:1;width:100%;resize:none;border:0;outline:0;padding:14px;color:#eee;background:#111;font:14px/1.55 ui-monospace,SFMono-Regular,Consolas,monospace}
+#previewPane{border-left:1px solid #ccc;background:white}
+#preview{width:100%;height:100%;border:0}
+@media(max-width:800px){main{grid-template-columns:1fr}#files,#previewPane{display:none}}
+</style>
+</head>
+<body>
+<header>
+<strong>Web File Editor</strong>
+<button id="open">Open</button><button id="new">New</button>
+<button id="save">Save</button><button id="saveas">Save As</button>
+<button id="previewBtn">Preview</button>
+<input id="filename" value="new-notes.html">
+<span id="status">No file open</span>
+</header>
+<main>
+<aside id="files">Server-free editor.<br><br>Open or create a file.</aside>
+<section id="work">
+<div id="toolbar">
+<button data-wrap="<strong>|</strong>">Bold</button>
+<button data-wrap="<em>|</em>">Italic</button>
+<button data-wrap="<u>|</u>">Underline</button>
+<button data-wrap="<h1>|</h1>">H1</button>
+<button data-wrap="<h2>|</h2>">H2</button>
+<button data-wrap="<p>|</p>">P</button>
+<button data-wrap="<pre><code>|</code></pre>">Code</button>
+<button data-wrap="<ul>\n<li>|</li>\n</ul>">List</button>
+</div>
+<textarea id="source" spellcheck="false" placeholder="Create or open a file..."></textarea>
+</section>
+<section id="previewPane"><iframe id="preview" title="Preview"></iframe></section>
+</main>
+<input id="picker" type="file" hidden>
+
+<script>
+(()=> {
+const src=document.querySelector("#source"), name=document.querySelector("#filename");
+const status=document.querySelector("#status"), frame=document.querySelector("#preview"), picker=document.querySelector("#picker");
+let handle=null, dirty=false;
+
+function setDirty(v){dirty=v;status.textContent=v?"Unsaved changes":(handle?"Saved":"No file open")}
+function render(){
+ if(/\.(html?|xhtml)$/i.test(name.value)){
+   frame.srcdoc=src.value;
+ }else{
+   frame.srcdoc="<pre style='white-space:pre-wrap;font:14px monospace;padding:16px'>"+
+   src.value.replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]))+"</pre>";
+ }
+}
+async function load(h){
+ const f=await h.getFile(); src.value=await f.text(); name.value=f.name; handle=h;
+ setDirty(false); render();
+}
+async function openFile(){
+ if(window.showOpenFilePicker){
+  try{const [h]=await showOpenFilePicker({multiple:false});await load(h);return}
+  catch(e){if(e.name==="AbortError")return}
+ }
+ picker.value="";picker.click();
+}
+picker.onchange=async()=>{const f=picker.files[0];if(!f)return;src.value=await f.text();name.value=f.name;handle=null;setDirty(true);render();status.textContent="Opened copy — use Save As"}
+async function write(h){
+ const w=await h.createWritable();await w.write(src.value);await w.close();handle=h;setDirty(false);render();
+}
+async function saveAs(){
+ if(window.showSaveFilePicker){
+  try{const h=await showSaveFilePicker({suggestedName:name.value||"new-notes.html"});await write(h);return}catch(e){if(e.name==="AbortError")return}
+ }
+ const a=document.createElement("a"),u=URL.createObjectURL(new Blob([src.value],{type:"text/plain"}));
+ a.href=u;a.download=name.value||"new-notes.html";a.click();URL.revokeObjectURL(u);handle=null;setDirty(false);
+}
+document.querySelector("#open").onclick=openFile;
+document.querySelector("#new").onclick=()=>{if(dirty&&!confirm("Discard unsaved changes?"))return;src.value="";name.value="new-notes.html";handle=null;setDirty(true);render();src.focus()};
+document.querySelector("#save").onclick=()=>handle?write(handle).catch(e=>status.textContent="Save failed: "+e.message):saveAs();
+document.querySelector("#saveas").onclick=saveAs;
+document.querySelector("#previewBtn").onclick=render;
+src.oninput=()=>setDirty(true); name.oninput=()=>setDirty(true);
+
+document.querySelectorAll("[data-wrap]").forEach(b=>b.onclick=()=>{
+ const [a,z]=b.dataset.wrap.split("|"),s=src.selectionStart,e=src.selectionEnd;
+ src.setRangeText(a+src.value.slice(s,e)+z,s,e,"select");src.focus();setDirty(true);render();
+});
+src.onkeydown=e=>{
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="s"){e.preventDefault();document.querySelector("#save").click()}
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="b"){e.preventDefault();document.querySelector('[data-wrap="<strong>|</strong>"]').click()}
+};
+window.onbeforeunload=e=>{if(dirty){e.preventDefault();e.returnValue=""}};
+render();
+})();
+</script>
+</body>
+</html>
