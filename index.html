@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V3.2</title><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V4.1</title><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -71,6 +71,9 @@ pre.ascii-diagram {
     font-size: 11px;
   }
 }
+
+#versionBadge{font-size:12px;font-weight:700;color:var(--muted);white-space:nowrap;padding:5px 7px;border:1px solid var(--border);border-radius:7px;background:var(--paper)}
+@media(max-width:600px){#versionBadge{font-size:11px;padding:5px 6px}}
 </style><style>
 /* V24: keep flow-chart branch markers and their labels on the same visual line. */
 .flow-row {
@@ -147,14 +150,15 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 #githubPanel button{padding:7px 10px;border:1px solid var(--border);border-radius:7px;background:var(--paper);color:var(--text);cursor:pointer}
 #githubPanel button:disabled{opacity:.55;cursor:wait}
 #githubPanel .gh-status{margin-top:9px;font-size:12px;color:var(--muted);min-height:16px}
-#versionFlag{margin-left:6px;padding:5px 8px;border:1px solid var(--border);border-radius:7px;color:var(--muted);font-size:12px;white-space:nowrap;line-height:1.2}
+#versionFlag{margin-left:6px;padding:5px 8px;bord
+<span id="versionBadge" title="ReaderEditor version">ReaderEditor GitHub V4.1</span>er:1px solid var(--border);border-radius:7px;color:var(--muted);font-size:12px;white-space:nowrap;line-height:1.2}
 </style>
 
 </head>
 <body>
-<!-- ReaderEditor GitHub V3.2: Open repository files; HTML and plain-text support. -->
+<!-- ReaderEditor GitHub V4.1: Open repository files; HTML and plain-text support. -->
 <div id="toolbar"><button id="homeBtn" onclick="goHome()" title="Home / Index">⌂</button>
-<button id="githubBtn" title="GitHub">GitHub</button><span id="versionFlag">ReaderEditor GitHub V3.2</span>
+<button id="githubBtn" title="GitHub">GitHub</button><span id="versionFlag">ReaderEditor GitHub V4.1</span>
 <button onclick="prev()" title="Previous page">←</button><button onclick="next()" title="Next page">→</button>
 <input id="jump" min="1" title="Enter page number" type="number" value="1"/>
 <span id="pageInfo">Page …</span>
@@ -647,7 +651,7 @@ function goHome(){
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){
       e.preventDefault();
       e.stopImmediatePropagation();
-      saveToHandle();
+      saveCurrent();
     }
   },true);
 
@@ -726,6 +730,20 @@ function goHome(){
     }
   }
 
+  async function saveCurrent(){
+    if(window.githubDocument && typeof window.githubSaveCurrent==='function'){
+      return await window.githubSaveCurrent();
+    }
+    if(location.protocol==='http:'&&(location.hostname==='127.0.0.1'||location.hostname==='localhost')){
+      return await saveToHandle();
+    }
+    if(!fileHandle){
+      status.textContent='Select this HTML file with Open first';
+      if(!await ensureHandle())return false;
+    }
+    return await saveToHandle();
+  }
+
   function saveAs(){
     const blob=new Blob([cleanClone()],{type:'text/html;charset=utf-8'});
     const a=document.createElement('a');
@@ -738,15 +756,7 @@ function goHome(){
   }
 
   saveBtn.onclick=async()=>{
-    if(location.protocol==='http:'&&(location.hostname==='127.0.0.1'||location.hostname==='localhost')){
-      await saveToHandle();
-      return;
-    }
-    if(!fileHandle){
-      status.textContent='Select this HTML file with Open first';
-      if(!await ensureHandle())return;
-    }
-    await saveToHandle();
+    await saveCurrent();
   };
 
   saveAsBtn.onclick=saveAs;
@@ -949,8 +959,121 @@ function decodeBase64Utf8(v){const binary=atob(v.replace(/\s/g,''));const bytes=
 function isHtmlFile(p){return /\.(html?|xhtml)$/i.test(p)}
 function loadHtmlContent(html){const doc=new DOMParser().parseFromString(html,'text/html');const source=doc.querySelector('#pages');if(source)return source.innerHTML;const body=doc.body;if(body){body.querySelectorAll('script').forEach(e=>e.remove());return body.innerHTML}return ''}
 function loadPlainText(text){const pre=document.createElement('pre');pre.className='code-block github-plain-text';pre.textContent=text;pre.style.whiteSpace='pre';pre.style.overflowX='auto';pre.style.overflowY='visible';pre.style.maxWidth='100%';pre.style.breakInside='auto';pre.style.columnBreakInside='auto';return pre}
-async function openGitHubFile(){const o=owner.value.trim(),r=repo.value.trim(),b=branch.value.trim()||'main',p=path.value.trim();if(!o||!r){status.textContent='Enter repository owner and repository name';return}if(!p){status.textContent='Enter the GitHub file path';return}saveConfig();status.textContent='Opening GitHub file…';openFileBtn.disabled=true;try{const url=apiBase()+'/contents/'+p.split('/').map(encodeURIComponent).join('/')+'?ref='+encodeURIComponent(b);const res=await fetch(url,{headers:headers()}),data=await readJson(res);if(!res.ok)throw new Error(data.message||('HTTP '+res.status));if(Array.isArray(data))throw new Error('Selected path is a directory; choose a file');if(!data.content)throw new Error('GitHub returned no file content');const raw=decodeBase64Utf8(data.content);const pages=document.getElementById('pages');pages.replaceChildren();if(isHtmlFile(p)){pages.innerHTML=loadHtmlContent(raw)}else{pages.appendChild(loadPlainText(raw))}window.githubDocument={owner:o,repo:r,branch:b,path:p,sha:data.sha||null,name:data.name||p.split('/').pop(),html:isHtmlFile(p),raw:raw};if(typeof invalidateMetrics==='function')invalidateMetrics();if(typeof fitDiagrams==='function')fitDiagrams();if(typeof update==='function')update(true);if(typeof goHome==='function' && !window.location.hash){/* no-op: preserve V70 navigation */}status.textContent='Opened ✓ '+(data.path||p);const es=document.getElementById('editStatus');if(es)es.textContent='GitHub file loaded • '+(data.path||p);panel.classList.remove('open')}catch(e){status.textContent='Open failed: '+e.message}finally{openFileBtn.disabled=false}}
+async function openGitHubFile(){const o=owner.value.trim(),r=repo.value.trim(),b=branch.value.trim()||'main',p=path.value.trim();if(!o||!r){status.textContent='Enter repository owner and repository name';return}if(!p){status.textContent='Enter the GitHub file path';return}saveConfig();status.textContent='Opening GitHub file…';openFileBtn.disabled=true;try{const url=apiBase()+'/contents/'+p.split('/').map(encodeURIComponent).join('/')+'?ref='+encodeURIComponent(b);const res=await fetch(url,{headers:headers()}),data=await readJson(res);if(!res.ok)throw new Error(data.message||('HTTP '+res.status));if(Array.isArray(data))throw new Error('Selected path is a directory; choose a file');if(!data.content)throw new Error('GitHub returned no file content');const raw=decodeBase64Utf8(data.content);const pages=document.getElementById('pages');pages.replaceChildren();if(isHtmlFile(p)){pages.innerHTML=loadHtmlContent(raw)}else{pages.appendChild(loadPlainText(raw))}window.githubDocument={owner:o,repo:r,branch:b,path:p,sha:data.sha||null,name:data.name||p.split('/').pop(),isHtml:isHtmlFile(p),raw:raw};if(typeof invalidateMetrics==='function')invalidateMetrics();if(typeof fitDiagrams==='function')fitDiagrams();if(typeof update==='function')update(true);if(typeof goHome==='function' && !window.location.hash){/* no-op: preserve V70 navigation */}status.textContent='Opened ✓ '+(data.path||p);const es=document.getElementById('editStatus');if(es)es.textContent='GitHub file loaded • '+(data.path||p);panel.classList.remove('open')}catch(e){status.textContent='Open failed: '+e.message}finally{openFileBtn.disabled=false}}
 openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');status.textContent='Not connected';owner.focus()});closeBtn.addEventListener('click',()=>panel.classList.remove('open'));testBtn.addEventListener('click',testConnection);openFileBtn.addEventListener('click',openGitHubFile);[owner,repo,branch,path].forEach(x=>x.addEventListener('change',saveConfig));
+})();
+
+</script>
+
+<script id="githubSaveV4">
+(function(){
+  'use strict';
+
+  const panel=document.getElementById('githubPanel');
+  const token=document.getElementById('ghToken');
+  const status=document.getElementById('ghStatus');
+
+  function headers(){
+    const h={
+      'Accept':'application/vnd.github+json',
+      'X-GitHub-Api-Version':'2022-11-28',
+      'Content-Type':'application/json'
+    };
+    const t=(token.value||'').trim();
+    if(t)h.Authorization='Bearer '+t;
+    return h;
+  }
+
+  function b64(value){
+    const bytes=new TextEncoder().encode(value);
+    let binary='';
+    for(let i=0;i<bytes.length;i+=0x8000){
+      binary+=String.fromCharCode(...bytes.subarray(i,i+0x8000));
+    }
+    return btoa(binary);
+  }
+
+  function contentToSave(){
+    const d=window.githubDocument;
+    const pages=document.getElementById('pages');
+
+    if(!d.isHtml){
+      // Raw/text files are saved exactly as text, including blank lines.
+      return pages.textContent;
+    }
+
+    // For HTML, preserve the original document and replace only its #pages content.
+    const doc=new DOMParser().parseFromString(d.raw,'text/html');
+    const sourcePages=doc.querySelector('#pages');
+    if(!sourcePages)throw new Error('Original HTML file has no #pages element');
+
+    sourcePages.innerHTML=pages.innerHTML;
+    sourcePages.querySelectorAll('[contenteditable]').forEach(x=>x.removeAttribute('contenteditable'));
+    sourcePages.querySelectorAll('[spellcheck]').forEach(x=>x.removeAttribute('spellcheck'));
+
+    return '<!DOCTYPE html>\n'+doc.documentElement.outerHTML;
+  }
+
+  async function saveGitHub(){
+    const d=window.githubDocument;
+    if(!d){
+      status.textContent='No GitHub file is open';
+      return false;
+    }
+
+    const t=(token.value||'').trim();
+    if(!t){
+      status.textContent='Enter a GitHub token with Contents write permission';
+      panel.classList.add('open');
+      token.focus();
+      return false;
+    }
+
+    const message=prompt('GitHub commit message:','Update '+d.name);
+    if(message===null)return false;
+
+    status.textContent='Saving to GitHub…';
+
+    try{
+      const content=contentToSave();
+      const url='https://api.github.com/repos/'+
+        encodeURIComponent(d.owner)+'/'+encodeURIComponent(d.repo)+
+        '/contents/'+d.path.split('/').map(encodeURIComponent).join('/');
+
+      const res=await fetch(url,{
+        method:'PUT',
+        headers:headers(),
+        body:JSON.stringify({
+          message:message,
+          content:b64(content),
+          sha:d.sha,
+          branch:d.branch
+        })
+      });
+
+      const data=await res.json().catch(()=>({}));
+
+      if(!res.ok){
+        if(res.status===409||res.status===422){
+          throw new Error('GitHub rejected the update. The file may have changed; reopen it before saving.');
+        }
+        throw new Error(data.message||('HTTP '+res.status));
+      }
+
+      d.sha=data.content?.sha||d.sha;
+      if(d.isHtml)d.raw=content;
+
+      status.textContent='Saved to GitHub ✓';
+      const editStatus=document.getElementById('editStatus');
+      if(editStatus)editStatus.textContent='GitHub saved • '+d.path;
+      return true;
+    }catch(e){
+      status.textContent='GitHub save failed: '+e.message;
+      return false;
+    }
+  }
+
+  window.githubSaveCurrent=saveGitHub;
 })();
 </script>
 </body></html>
