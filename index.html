@@ -156,9 +156,9 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 
 </head>
 <body>
-<!-- ReaderEditor GitHub V6.1.2: Open, Save, and Save As repository files; HTML and plain-text support. -->
+<!-- ReaderEditor GitHub V4.1: Open repository files; HTML and plain-text support. -->
 <div id="toolbar"><button id="homeBtn" onclick="goHome()" title="Home / Index">⌂</button>
-<button id="githubBtn" title="GitHub">GitHub</button><span id="versionFlag">ReaderEditor GitHub V6.1.2</span>
+<button id="githubBtn" title="GitHub">GitHub</button><span id="versionFlag">ReaderEditor GitHub V4.1</span>
 <button onclick="prev()" title="Previous page">←</button><button onclick="next()" title="Next page">→</button>
 <input id="jump" min="1" title="Enter page number" type="number" value="1"/>
 <span id="pageInfo">Page …</span>
@@ -175,12 +175,11 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 <button class="edit-tool" id="cliBtn">CLI</button>
 <button class="edit-tool" id="saveBtn">Save</button>
 <button class="edit-tool" id="saveAsBtn">Save As</button>
-<button class="edit-tool" id="newBtn">New</button>
 <button class="edit-tool" id="openBtn">Open</button>
 <span class="edit-status" id="editStatus">Edit mode</span>
 </div>
 <div id="githubPanel" aria-label="GitHub connection">
-<h3>GitHub — V6.1.2</h3>
+<h3>GitHub — V3.2</h3>
 <label>Repository owner</label><input id="ghOwner" placeholder="username or organisation"/>
 <label>Repository</label><input id="ghRepo" placeholder="repository-name"/>
 <label>Branch</label><input id="ghBranch" value="main"/>
@@ -745,12 +744,7 @@ function goHome(){
     return await saveToHandle();
   }
 
-  async function saveAs(){
-    if(window.githubDocument && typeof window.githubSaveAs==='function'){
-      await window.githubSaveAs();
-      return;
-    }
-
+  function saveAs(){
     const blob=new Blob([cleanClone()],{type:'text/html;charset=utf-8'});
     const a=document.createElement('a');
     a.href=URL.createObjectURL(blob);
@@ -766,33 +760,6 @@ function goHome(){
   };
 
   saveAsBtn.onclick=saveAs;
-
-  newBtn.onclick=async()=>{
-    const pages=document.getElementById('pages');
-    pages.replaceChildren();
-
-    const blank=document.createElement('p');
-    blank.innerHTML='<br>';
-    pages.appendChild(blank);
-
-    const o=document.getElementById('ghOwner').value.trim();
-    const r=document.getElementById('ghRepo').value.trim();
-    const b=document.getElementById('ghBranch').value.trim()||'main';
-
-    window.githubDocument={
-      owner:o,repo:r,branch:b,path:'',sha:null,
-      name:'newfile.txt',isHtml:false,raw:'',isNew:true
-    };
-
-    if(typeof invalidateMetrics==='function')invalidateMetrics();
-    if(typeof fitDiagrams==='function')fitDiagrams();
-
-    const editStatus=document.getElementById('editStatus');
-    if(editStatus)editStatus.textContent='New empty document';
-
-    const host=makeHost();
-    if(host)host.focus();
-  };
 
   openBtn.onclick=async()=>{
     if(location.protocol==='http:'&&(location.hostname==='127.0.0.1'||location.hostname==='localhost')){
@@ -1005,7 +972,6 @@ openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');s
   const panel=document.getElementById('githubPanel');
   const token=document.getElementById('ghToken');
   const status=document.getElementById('ghStatus');
-  const newBtn=document.getElementById('newBtn');
 
   function headers(){
     const h={
@@ -1032,40 +998,6 @@ openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');s
     const pages=document.getElementById('pages');
 
     if(!d.isHtml){
-      // Existing GitHub files keep the proven V6.0 exact-text path.
-      // New blank documents are edited through a contenteditable host, where
-      // textContent would remove the line/block boundaries created by Enter.
-      if(d.isNew && typeof currentHost!=='undefined' && currentHost){
-        // New documents use contenteditable. Build the text from its block
-        // structure instead of innerText, because browser innerText can
-        // normalize/collapse blank block boundaries.
-        const blockTags=new Set(['P','DIV','LI','H1','H2','H3','H4','H5','H6','PRE','BLOCKQUOTE']);
-        let out='';
-
-        function readEditorNode(node){
-          if(node.nodeType===Node.TEXT_NODE){
-            out+=node.nodeValue.replace(/\\r\\n/g,'\\n').replace(/\\r/g,'\\n');
-            return;
-          }
-          if(node.nodeType!==Node.ELEMENT_NODE)return;
-
-          if(node.tagName==='BR'){
-            out+='\\n';
-            return;
-          }
-
-          const isBlock=blockTags.has(node.tagName);
-          for(const child of node.childNodes)readEditorNode(child);
-
-          if(isBlock && !out.endsWith('\\n'))out+='\\n';
-        }
-
-        for(const child of currentHost.childNodes)readEditorNode(child);
-
-        // Do not add a synthetic final newline merely because the editor host
-        // contains a trailing block. Preserve all user-created blank lines.
-        return out.replace(/\\r\\n/g,'\\n').replace(/\\r/g,'\\n');
-      }
       // Raw/text files are saved exactly as text, including blank lines.
       return pages.textContent;
     }
@@ -1082,90 +1014,6 @@ openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');s
     return '<!DOCTYPE html>\n'+doc.documentElement.outerHTML;
   }
 
-  async function createGitHubFile(d,p,message){
-    const content=contentToSave();
-    const url='https://api.github.com/repos/'+
-      encodeURIComponent(d.owner)+'/'+encodeURIComponent(d.repo)+
-      '/contents/'+p.split('/').map(encodeURIComponent).join('/');
-
-    const res=await fetch(url,{
-      method:'PUT',
-      headers:headers(),
-      body:JSON.stringify({
-        message:message,
-        content:b64(content),
-        branch:d.branch
-      })
-    });
-
-    const data=await res.json().catch(()=>({}));
-    if(!res.ok)throw new Error(data.message||('HTTP '+res.status));
-
-    d.path=p;
-    d.name=data.content?.name||p.split('/').pop();
-    d.sha=data.content?.sha||null;
-    d.raw=content;
-    d.isNew=false;
-
-    status.textContent='Created on GitHub ✓';
-    const editStatus=document.getElementById('editStatus');
-    if(editStatus)editStatus.textContent='GitHub file created • '+p;
-    return true;
-  }
-
-  async function newGitHubFile(){
-    const t=(token.value||'').trim();
-    if(!t){
-      status.textContent='Enter a GitHub token with Contents write permission';
-      panel.classList.add('open');
-      token.focus();
-      return false;
-    }
-
-    const o=document.getElementById('ghOwner').value.trim();
-    const r=document.getElementById('ghRepo').value.trim();
-    const b=document.getElementById('ghBranch').value.trim()||'main';
-
-    if(!o||!r){
-      status.textContent='Enter repository owner and repository name';
-      panel.classList.add('open');
-      return false;
-    }
-
-    const answer=prompt('New GitHub file path:','newfile');
-    if(answer===null)return false;
-    const p=answer.trim();
-    if(!p){
-      status.textContent='File path cannot be empty';
-      return false;
-    }
-
-    const message=prompt('GitHub commit message:','Create '+p.split('/').pop());
-    if(message===null)return false;
-
-    const pages=document.getElementById('pages');
-    pages.replaceChildren();
-
-    window.githubDocument={
-      owner:o,repo:r,branch:b,path:p,sha:null,
-      name:p.split('/').pop(),
-      isHtml:/\.(html?|xhtml)$/i.test(p),
-      raw:'',isNew:true
-    };
-
-    status.textContent='Creating blank GitHub file…';
-
-    try{
-      await createGitHubFile(window.githubDocument,p,message);
-      if(typeof invalidateMetrics==='function')invalidateMetrics();
-      if(typeof fitDiagrams==='function')fitDiagrams();
-      return true;
-    }catch(e){
-      status.textContent='GitHub New failed: '+e.message;
-      return false;
-    }
-  }
-
   async function saveGitHub(){
     const d=window.githubDocument;
     if(!d){
@@ -1179,31 +1027,6 @@ openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');s
       panel.classList.add('open');
       token.focus();
       return false;
-    }
-
-    if(d.isNew){
-      const answer=prompt('New GitHub file path:',d.path||'newfile.txt');
-      if(answer===null)return false;
-      const p=answer.trim();
-      if(!p){
-        status.textContent='File path cannot be empty';
-        return false;
-      }
-
-      const message=prompt('GitHub commit message:','Create '+p.split('/').pop());
-      if(message===null)return false;
-
-      d.path=p;
-      d.name=p.split('/').pop();
-      d.isHtml=/\.(html?|xhtml)$/i.test(p);
-
-      status.textContent='Creating GitHub file…';
-      try{
-        return await createGitHubFile(d,p,message);
-      }catch(e){
-        status.textContent='GitHub save failed: '+e.message;
-        return false;
-      }
     }
 
     const message=prompt('GitHub commit message:','Update '+d.name);
@@ -1250,124 +1073,7 @@ openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');s
     }
   }
 
-  async function saveGitHubAs(){
-    const d=window.githubDocument;
-    if(!d){
-      status.textContent='No GitHub file is open';
-      return false;
-    }
-
-    const t=(token.value||'').trim();
-    if(!t){
-      status.textContent='Enter a GitHub token with Contents write permission';
-      panel.classList.add('open');
-      token.focus();
-      return false;
-    }
-
-    const newPath=prompt('New GitHub file path:',d.path);
-    if(newPath===null)return false;
-    const p=newPath.trim();
-    if(!p){
-      status.textContent='File path cannot be empty';
-      return false;
-    }
-    if(p===d.path){
-      status.textContent='Save As needs a different file path';
-      return false;
-    }
-
-    const message=prompt('GitHub commit message:','Create '+p.split('/').pop());
-    if(message===null)return false;
-
-    status.textContent='Creating GitHub file…';
-
-    try{
-      const content=contentToSave();
-      const url='https://api.github.com/repos/'+
-        encodeURIComponent(d.owner)+'/'+encodeURIComponent(d.repo)+
-        '/contents/'+p.split('/').map(encodeURIComponent).join('/');
-
-      const res=await fetch(url,{
-        method:'PUT',
-        headers:headers(),
-        body:JSON.stringify({
-          message:message,
-          content:b64(content),
-          branch:d.branch
-        })
-      });
-
-      const data=await res.json().catch(()=>({}));
-
-      if(!res.ok){
-        throw new Error(data.message||('HTTP '+res.status));
-      }
-
-      d.path=p;
-      d.name=data.content?.name||p.split('/').pop();
-      d.sha=data.content?.sha||null;
-      d.raw=content;
-
-      status.textContent='Created on GitHub ✓';
-      const editStatus=document.getElementById('editStatus');
-      if(editStatus)editStatus.textContent='GitHub file created • '+p;
-      return true;
-    }catch(e){
-      status.textContent='GitHub Save As failed: '+e.message;
-      return false;
-    }
-  }
-
   window.githubSaveCurrent=saveGitHub;
-  window.githubSaveAs=saveGitHubAs;
-})();
-</script>
-<script id="v61-blank-start">
-(function(){
-  'use strict';
-
-  // Start with one real, empty page node so the existing V70 editor
-  // can enter its normal current-page editing mode.
-  const pages=document.getElementById('pages');
-  if(pages && !pages.children.length){
-    const p=document.createElement('p');
-    p.innerHTML='<br>';
-    pages.appendChild(p);
-  }
-})();
-</script>
-<script id="v61-github-new-state">
-(function(){
-  'use strict';
-  if(!window.githubDocument){
-    try{
-      const c=JSON.parse(localStorage.getItem('ccnaGithubConfig')||'{}');
-      window.githubDocument={
-        owner:c.owner||'',
-        repo:c.repo||'',
-        branch:c.branch||'main',
-        path:'',
-        sha:null,
-        name:'newfile.txt',
-        isHtml:false,
-        raw:'',
-        isNew:true
-      };
-    }catch(e){
-      window.githubDocument={
-        owner:'',
-        repo:'',
-        branch:'main',
-        path:'',
-        sha:null,
-        name:'newfile.txt',
-        isHtml:false,
-        raw:'',
-        isNew:true
-      };
-    }
-  }
 })();
 </script>
 </body></html>
