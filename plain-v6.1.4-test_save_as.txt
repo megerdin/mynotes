@@ -1,0 +1,10 @@
+line one
+
+line three EDITED
+
+
+last line
+
+NEW LINE
+
+now save as.
