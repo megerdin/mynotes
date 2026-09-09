@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V5.1.1</title><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V4.1</title><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -150,14 +150,15 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 #githubPanel button{padding:7px 10px;border:1px solid var(--border);border-radius:7px;background:var(--paper);color:var(--text);cursor:pointer}
 #githubPanel button:disabled{opacity:.55;cursor:wait}
 #githubPanel .gh-status{margin-top:9px;font-size:12px;color:var(--muted);min-height:16px}
-#versionFlag{margin-left:6px;padding:5px 8px;border:1px solid var(--border);border-radius:7px;color:var(--muted);font-size:12px;white-space:nowrap;line-height:1.2}
+#versionFlag{margin-left:6px;padding:5px 8px;bord
+<span id="versionBadge" title="ReaderEditor version">ReaderEditor GitHub V4.1</span>er:1px solid var(--border);border-radius:7px;color:var(--muted);font-size:12px;white-space:nowrap;line-height:1.2}
 </style>
 
 </head>
 <body>
-<!-- ReaderEditor GitHub V5.1.1: Open, Save, and Save As repository files; HTML and plain-text support. -->
+<!-- ReaderEditor GitHub V6.1.1: Open, Save, and Save As repository files; HTML and plain-text support. -->
 <div id="toolbar"><button id="homeBtn" onclick="goHome()" title="Home / Index">⌂</button>
-<button id="githubBtn" title="GitHub">GitHub</button><span id="versionFlag">ReaderEditor GitHub V5.1.1</span>
+<button id="githubBtn" title="GitHub">GitHub</button><span id="versionFlag">ReaderEditor GitHub V6.1.1</span>
 <button onclick="prev()" title="Previous page">←</button><button onclick="next()" title="Next page">→</button>
 <input id="jump" min="1" title="Enter page number" type="number" value="1"/>
 <span id="pageInfo">Page …</span>
@@ -174,11 +175,12 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 <button class="edit-tool" id="cliBtn">CLI</button>
 <button class="edit-tool" id="saveBtn">Save</button>
 <button class="edit-tool" id="saveAsBtn">Save As</button>
+<button class="edit-tool" id="newBtn">New</button>
 <button class="edit-tool" id="openBtn">Open</button>
 <span class="edit-status" id="editStatus">Edit mode</span>
 </div>
 <div id="githubPanel" aria-label="GitHub connection">
-<h3>GitHub — V5.1.1</h3>
+<h3>GitHub — V6.1.1</h3>
 <label>Repository owner</label><input id="ghOwner" placeholder="username or organisation"/>
 <label>Repository</label><input id="ghRepo" placeholder="repository-name"/>
 <label>Branch</label><input id="ghBranch" value="main"/>
@@ -765,6 +767,33 @@ function goHome(){
 
   saveAsBtn.onclick=saveAs;
 
+  newBtn.onclick=async()=>{
+    const pages=document.getElementById('pages');
+    pages.replaceChildren();
+
+    const blank=document.createElement('p');
+    blank.innerHTML='<br>';
+    pages.appendChild(blank);
+
+    const o=document.getElementById('ghOwner').value.trim();
+    const r=document.getElementById('ghRepo').value.trim();
+    const b=document.getElementById('ghBranch').value.trim()||'main';
+
+    window.githubDocument={
+      owner:o,repo:r,branch:b,path:'',sha:null,
+      name:'newfile.txt',isHtml:false,raw:'',isNew:true
+    };
+
+    if(typeof invalidateMetrics==='function')invalidateMetrics();
+    if(typeof fitDiagrams==='function')fitDiagrams();
+
+    const editStatus=document.getElementById('editStatus');
+    if(editStatus)editStatus.textContent='New empty document';
+
+    const host=makeHost();
+    if(host)host.focus();
+  };
+
   openBtn.onclick=async()=>{
     if(location.protocol==='http:'&&(location.hostname==='127.0.0.1'||location.hostname==='localhost')){
       status.textContent='Already editing the current file • Save writes directly to it';
@@ -976,6 +1005,7 @@ openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');s
   const panel=document.getElementById('githubPanel');
   const token=document.getElementById('ghToken');
   const status=document.getElementById('ghStatus');
+  const newBtn=document.getElementById('newBtn');
 
   function headers(){
     const h={
@@ -1002,6 +1032,12 @@ openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');s
     const pages=document.getElementById('pages');
 
     if(!d.isHtml){
+      // Existing GitHub files keep the proven V6.0 exact-text path.
+      // New blank documents are edited through a contenteditable host, where
+      // textContent would remove the line/block boundaries created by Enter.
+      if(d.isNew && typeof currentHost!=='undefined' && currentHost){
+        return currentHost.innerText.replace(/\\r\\n/g,'\\n').replace(/\\r/g,'\\n');
+      }
       // Raw/text files are saved exactly as text, including blank lines.
       return pages.textContent;
     }
@@ -1018,6 +1054,90 @@ openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');s
     return '<!DOCTYPE html>\n'+doc.documentElement.outerHTML;
   }
 
+  async function createGitHubFile(d,p,message){
+    const content=contentToSave();
+    const url='https://api.github.com/repos/'+
+      encodeURIComponent(d.owner)+'/'+encodeURIComponent(d.repo)+
+      '/contents/'+p.split('/').map(encodeURIComponent).join('/');
+
+    const res=await fetch(url,{
+      method:'PUT',
+      headers:headers(),
+      body:JSON.stringify({
+        message:message,
+        content:b64(content),
+        branch:d.branch
+      })
+    });
+
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok)throw new Error(data.message||('HTTP '+res.status));
+
+    d.path=p;
+    d.name=data.content?.name||p.split('/').pop();
+    d.sha=data.content?.sha||null;
+    d.raw=content;
+    d.isNew=false;
+
+    status.textContent='Created on GitHub ✓';
+    const editStatus=document.getElementById('editStatus');
+    if(editStatus)editStatus.textContent='GitHub file created • '+p;
+    return true;
+  }
+
+  async function newGitHubFile(){
+    const t=(token.value||'').trim();
+    if(!t){
+      status.textContent='Enter a GitHub token with Contents write permission';
+      panel.classList.add('open');
+      token.focus();
+      return false;
+    }
+
+    const o=document.getElementById('ghOwner').value.trim();
+    const r=document.getElementById('ghRepo').value.trim();
+    const b=document.getElementById('ghBranch').value.trim()||'main';
+
+    if(!o||!r){
+      status.textContent='Enter repository owner and repository name';
+      panel.classList.add('open');
+      return false;
+    }
+
+    const answer=prompt('New GitHub file path:','newfile');
+    if(answer===null)return false;
+    const p=answer.trim();
+    if(!p){
+      status.textContent='File path cannot be empty';
+      return false;
+    }
+
+    const message=prompt('GitHub commit message:','Create '+p.split('/').pop());
+    if(message===null)return false;
+
+    const pages=document.getElementById('pages');
+    pages.replaceChildren();
+
+    window.githubDocument={
+      owner:o,repo:r,branch:b,path:p,sha:null,
+      name:p.split('/').pop(),
+      isHtml:/\.(html?|xhtml)$/i.test(p),
+      raw:'',isNew:true
+    };
+
+    status.textContent='Creating blank GitHub file…';
+
+    try{
+      await createGitHubFile(window.githubDocument,p,message);
+      if(typeof invalidateMetrics==='function')invalidateMetrics();
+      if(typeof fitDiagrams==='function')fitDiagrams();
+      return true;
+    }catch(e){
+      status.textContent='GitHub New failed: '+e.message;
+      return false;
+    }
+  }
+
   async function saveGitHub(){
     const d=window.githubDocument;
     if(!d){
@@ -1031,6 +1151,31 @@ openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');s
       panel.classList.add('open');
       token.focus();
       return false;
+    }
+
+    if(d.isNew){
+      const answer=prompt('New GitHub file path:',d.path||'newfile.txt');
+      if(answer===null)return false;
+      const p=answer.trim();
+      if(!p){
+        status.textContent='File path cannot be empty';
+        return false;
+      }
+
+      const message=prompt('GitHub commit message:','Create '+p.split('/').pop());
+      if(message===null)return false;
+
+      d.path=p;
+      d.name=p.split('/').pop();
+      d.isHtml=/\.(html?|xhtml)$/i.test(p);
+
+      status.textContent='Creating GitHub file…';
+      try{
+        return await createGitHubFile(d,p,message);
+      }catch(e){
+        status.textContent='GitHub save failed: '+e.message;
+        return false;
+      }
     }
 
     const message=prompt('GitHub commit message:','Update '+d.name);
@@ -1148,6 +1293,53 @@ openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');s
 
   window.githubSaveCurrent=saveGitHub;
   window.githubSaveAs=saveGitHubAs;
+})();
+</script>
+<script id="v61-blank-start">
+(function(){
+  'use strict';
+
+  // Start with one real, empty page node so the existing V70 editor
+  // can enter its normal current-page editing mode.
+  const pages=document.getElementById('pages');
+  if(pages && !pages.children.length){
+    const p=document.createElement('p');
+    p.innerHTML='<br>';
+    pages.appendChild(p);
+  }
+})();
+</script>
+<script id="v61-github-new-state">
+(function(){
+  'use strict';
+  if(!window.githubDocument){
+    try{
+      const c=JSON.parse(localStorage.getItem('ccnaGithubConfig')||'{}');
+      window.githubDocument={
+        owner:c.owner||'',
+        repo:c.repo||'',
+        branch:c.branch||'main',
+        path:'',
+        sha:null,
+        name:'newfile.txt',
+        isHtml:false,
+        raw:'',
+        isNew:true
+      };
+    }catch(e){
+      window.githubDocument={
+        owner:'',
+        repo:'',
+        branch:'main',
+        path:'',
+        sha:null,
+        name:'newfile.txt',
+        isHtml:false,
+        raw:'',
+        isNew:true
+      };
+    }
+  }
 })();
 </script>
 </body></html>
