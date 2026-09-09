@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V6.0.1</title><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V5.1.1</title><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -155,9 +155,9 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 
 </head>
 <body>
-<!-- ReaderEditor GitHub V6.0.1: Open, Save, Save As, and New; HTML and plain-text support. -->
+<!-- ReaderEditor GitHub V5.1.1: Open, Save, and Save As repository files; HTML and plain-text support. -->
 <div id="toolbar"><button id="homeBtn" onclick="goHome()" title="Home / Index">⌂</button>
-<button id="githubBtn" title="GitHub">GitHub</button><span id="versionFlag">ReaderEditor GitHub V6.0.1</span>
+<button id="githubBtn" title="GitHub">GitHub</button><span id="versionFlag">ReaderEditor GitHub V5.1.1</span>
 <button onclick="prev()" title="Previous page">←</button><button onclick="next()" title="Next page">→</button>
 <input id="jump" min="1" title="Enter page number" type="number" value="1"/>
 <span id="pageInfo">Page …</span>
@@ -174,12 +174,11 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 <button class="edit-tool" id="cliBtn">CLI</button>
 <button class="edit-tool" id="saveBtn">Save</button>
 <button class="edit-tool" id="saveAsBtn">Save As</button>
-<button class="edit-tool" id="newBtn">New</button>
 <button class="edit-tool" id="openBtn">Open</button>
 <span class="edit-status" id="editStatus">Edit mode</span>
 </div>
 <div id="githubPanel" aria-label="GitHub connection">
-<h3>GitHub — V6.0.1</h3>
+<h3>GitHub — V5.1.1</h3>
 <label>Repository owner</label><input id="ghOwner" placeholder="username or organisation"/>
 <label>Repository</label><input id="ghRepo" placeholder="repository-name"/>
 <label>Branch</label><input id="ghBranch" value="main"/>
@@ -766,27 +765,6 @@ function goHome(){
 
   saveAsBtn.onclick=saveAs;
 
-  const newBtn=document.getElementById('newBtn');
-
-  newBtn.onclick=()=>{
-    const p=document.getElementById('pages');
-    p.replaceChildren();
-    const pre=loadPlainText('');
-    p.appendChild(pre);
-
-    const o=document.getElementById('ghOwner').value.trim();
-    const r=document.getElementById('ghRepo').value.trim();
-    const b=document.getElementById('ghBranch').value.trim()||'main';
-    window.githubDocument={owner:o,repo:r,branch:b,path:'newfile.txt',sha:null,name:'newfile.txt',isHtml:false,raw:'',isNew:true};
-    dirty=false;
-    invalidateMetrics();
-    fitDiagrams();
-    status.textContent='New blank document';
-    const es=document.getElementById('editStatus');
-    if(es)es.textContent='New blank document • use Save or Save As';
-    if(editing)exitEditing();
-  };
-
   openBtn.onclick=async()=>{
     if(location.protocol==='http:'&&(location.hostname==='127.0.0.1'||location.hostname==='localhost')){
       status.textContent='Already editing the current file • Save writes directly to it';
@@ -1055,16 +1033,7 @@ openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');s
       return false;
     }
 
-    if(d.isNew){
-      const newPath=prompt('New GitHub file path:',d.path||'newfile.txt');
-      if(newPath===null)return false;
-      const p=newPath.trim();
-      if(!p){status.textContent='File path cannot be empty';return false;}
-      d.path=p;
-      d.name=p.split('/').pop();
-    }
-
-    const message=prompt('GitHub commit message:',(d.isNew?'Create ':'Update ')+d.name);
+    const message=prompt('GitHub commit message:','Update '+d.name);
     if(message===null)return false;
 
     status.textContent='Saving to GitHub…';
@@ -1081,7 +1050,7 @@ openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');s
         body:JSON.stringify({
           message:message,
           content:b64(content),
-          ...(d.isNew?{}:{sha:d.sha}),
+          sha:d.sha,
           branch:d.branch
         })
       });
@@ -1096,7 +1065,6 @@ openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');s
       }
 
       d.sha=data.content?.sha||d.sha;
-      d.isNew=false;
       if(d.isHtml)d.raw=content;
 
       status.textContent='Saved to GitHub ✓';
@@ -1180,30 +1148,6 @@ openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');s
 
   window.githubSaveCurrent=saveGitHub;
   window.githubSaveAs=saveGitHubAs;
-})();
-</script>
-<script id="v6-startup-blank">
-(function(){
-  'use strict';
-  const p=document.getElementById('pages');
-  if(!p)return;
-  p.replaceChildren();
-  const pre=document.createElement('pre');
-  pre.className='code-block github-plain-text';
-  pre.textContent='';
-  pre.style.whiteSpace='pre';
-  pre.style.overflowX='auto';
-  pre.style.overflowY='visible';
-  pre.style.maxWidth='100%';
-  pre.style.breakInside='auto';
-  pre.style.columnBreakInside='auto';
-  p.appendChild(pre);
-  try{
-    const c=JSON.parse(localStorage.getItem('ccnaGithubConfig')||'{}');
-    window.githubDocument={owner:c.owner||'',repo:c.repo||'',branch:c.branch||'main',path:'newfile.txt',sha:null,name:'newfile.txt',isHtml:false,raw:'',isNew:true};
-  }catch(e){
-    window.githubDocument={owner:'',repo:'',branch:'main',path:'newfile.txt',sha:null,name:'newfile.txt',isHtml:false,raw:'',isNew:true};
-  }
 })();
 </script>
 </body></html>
