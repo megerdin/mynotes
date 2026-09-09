@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>CCNA Study Notes Reader</title><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V3.2</title><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -33,6 +33,7 @@ body.nav-hidden #reader{height:100dvh !important}
 #pages.content .section-rule{height:1px;line-height:1px;color:var(--border);margin:.25em 0 .45em;overflow:hidden}
 #pages.content .code-block,#pages.content .diagram{display:block;box-sizing:border-box;width:100%;max-width:100%;margin:.45em 0 .55em;padding:.65em .7em;border:1px solid var(--border);border-radius:8px;background:var(--code);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,"Liberation Mono","Noto Sans Mono",monospace;font-size:clamp(10px, 1.9vw, 13px);line-height:1.35;white-space:pre;overflow-x:auto;overflow-y:hidden;break-inside:avoid-column;column-break-inside:avoid;color:var(--text);tab-size:4}
 #pages.content .diagram{font-size:var(--diagram-size,12px);line-height:1.15;text-align:left;padding:.55em .35em}
+#pages.content .github-plain-text{white-space:pre!important;overflow-wrap:normal;word-break:normal;break-inside:auto;column-break-inside:auto}
 @media(max-width:600px){#pages.content{font-size:var(--font);line-height:1.43}#pages.content p{margin-bottom:.32em}#pages.content h2{font-size:1.06em;margin:.42em 0 .24em}#pages.content h3{font-size:1em;margin:.38em 0 .22em}#pages.content .code-block{font-size:11px;padding:.55em .55em;line-height:1.32}#pages.content .diagram{font-size:var(--diagram-size,9px);line-height:1.08;padding:.45em .2em}}
 
 #pages.content .ccna-index{margin:0 0 1em 0;padding:.7em .75em;border:1px solid var(--border);border-radius:10px;background:var(--paper);break-inside:avoid-column;break-after:column;column-span:none}
@@ -146,13 +147,14 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 #githubPanel button{padding:7px 10px;border:1px solid var(--border);border-radius:7px;background:var(--paper);color:var(--text);cursor:pointer}
 #githubPanel button:disabled{opacity:.55;cursor:wait}
 #githubPanel .gh-status{margin-top:9px;font-size:12px;color:var(--muted);min-height:16px}
+#versionFlag{margin-left:6px;padding:5px 8px;border:1px solid var(--border);border-radius:7px;color:var(--muted);font-size:12px;white-space:nowrap;line-height:1.2}
 </style>
 
 </head>
 <body>
-<!-- GitHub V3: Open repository files; HTML and plain-text support. -->
+<!-- ReaderEditor GitHub V3.2: Open repository files; HTML and plain-text support. -->
 <div id="toolbar"><button id="homeBtn" onclick="goHome()" title="Home / Index">⌂</button>
-<button id="githubBtn" title="GitHub">GitHub</button>
+<button id="githubBtn" title="GitHub">GitHub</button><span id="versionFlag">ReaderEditor GitHub V3.2</span>
 <button onclick="prev()" title="Previous page">←</button><button onclick="next()" title="Next page">→</button>
 <input id="jump" min="1" title="Enter page number" type="number" value="1"/>
 <span id="pageInfo">Page …</span>
@@ -173,7 +175,7 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 <span class="edit-status" id="editStatus">Edit mode</span>
 </div>
 <div id="githubPanel" aria-label="GitHub connection">
-<h3>GitHub — V3</h3>
+<h3>GitHub — V3.2</h3>
 <label>Repository owner</label><input id="ghOwner" placeholder="username or organisation"/>
 <label>Repository</label><input id="ghRepo" placeholder="repository-name"/>
 <label>Branch</label><input id="ghBranch" value="main"/>
@@ -946,8 +948,8 @@ async function testConnection(){const o=owner.value.trim(),r=repo.value.trim();i
 function decodeBase64Utf8(v){const binary=atob(v.replace(/\s/g,''));const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));return new TextDecoder('utf-8').decode(bytes)}
 function isHtmlFile(p){return /\.(html?|xhtml)$/i.test(p)}
 function loadHtmlContent(html){const doc=new DOMParser().parseFromString(html,'text/html');const source=doc.querySelector('#pages');if(source)return source.innerHTML;const body=doc.body;if(body){body.querySelectorAll('script').forEach(e=>e.remove());return body.innerHTML}return ''}
-function loadPlainText(text){const pre=document.createElement('pre');pre.className='code-block github-plain-text';pre.textContent=text;pre.style.whiteSpace='pre';pre.style.overflowX='auto';pre.style.overflowY='visible';pre.style.maxWidth='100%';return pre.outerHTML}
-async function openGitHubFile(){const o=owner.value.trim(),r=repo.value.trim(),b=branch.value.trim()||'main',p=path.value.trim();if(!o||!r){status.textContent='Enter repository owner and repository name';return}if(!p){status.textContent='Enter the GitHub file path';return}saveConfig();status.textContent='Opening GitHub file…';openFileBtn.disabled=true;try{const url=apiBase()+'/contents/'+p.split('/').map(encodeURIComponent).join('/')+'?ref='+encodeURIComponent(b);const res=await fetch(url,{headers:headers()}),data=await readJson(res);if(!res.ok)throw new Error(data.message||('HTTP '+res.status));if(Array.isArray(data))throw new Error('Selected path is a directory; choose a file');if(!data.content)throw new Error('GitHub returned no file content');const raw=decodeBase64Utf8(data.content);const pages=document.getElementById('pages');pages.innerHTML=isHtmlFile(p)?loadHtmlContent(raw):loadPlainText(raw);window.githubDocument={owner:o,repo:r,branch:b,path:p,sha:data.sha||null,name:data.name||p.split('/').pop(),html:isHtmlFile(p),raw:raw};if(typeof invalidateMetrics==='function')invalidateMetrics();if(typeof fitDiagrams==='function')fitDiagrams();if(typeof update==='function')update(true);if(typeof goHome==='function' && !window.location.hash){/* no-op: preserve V70 navigation */}status.textContent='Opened ✓ '+(data.path||p);const es=document.getElementById('editStatus');if(es)es.textContent='GitHub file loaded • '+(data.path||p);panel.classList.remove('open')}catch(e){status.textContent='Open failed: '+e.message}finally{openFileBtn.disabled=false}}
+function loadPlainText(text){const pre=document.createElement('pre');pre.className='code-block github-plain-text';pre.textContent=text;pre.style.whiteSpace='pre';pre.style.overflowX='auto';pre.style.overflowY='visible';pre.style.maxWidth='100%';pre.style.breakInside='auto';pre.style.columnBreakInside='auto';return pre}
+async function openGitHubFile(){const o=owner.value.trim(),r=repo.value.trim(),b=branch.value.trim()||'main',p=path.value.trim();if(!o||!r){status.textContent='Enter repository owner and repository name';return}if(!p){status.textContent='Enter the GitHub file path';return}saveConfig();status.textContent='Opening GitHub file…';openFileBtn.disabled=true;try{const url=apiBase()+'/contents/'+p.split('/').map(encodeURIComponent).join('/')+'?ref='+encodeURIComponent(b);const res=await fetch(url,{headers:headers()}),data=await readJson(res);if(!res.ok)throw new Error(data.message||('HTTP '+res.status));if(Array.isArray(data))throw new Error('Selected path is a directory; choose a file');if(!data.content)throw new Error('GitHub returned no file content');const raw=decodeBase64Utf8(data.content);const pages=document.getElementById('pages');pages.replaceChildren();if(isHtmlFile(p)){pages.innerHTML=loadHtmlContent(raw)}else{pages.appendChild(loadPlainText(raw))}window.githubDocument={owner:o,repo:r,branch:b,path:p,sha:data.sha||null,name:data.name||p.split('/').pop(),html:isHtmlFile(p),raw:raw};if(typeof invalidateMetrics==='function')invalidateMetrics();if(typeof fitDiagrams==='function')fitDiagrams();if(typeof update==='function')update(true);if(typeof goHome==='function' && !window.location.hash){/* no-op: preserve V70 navigation */}status.textContent='Opened ✓ '+(data.path||p);const es=document.getElementById('editStatus');if(es)es.textContent='GitHub file loaded • '+(data.path||p);panel.classList.remove('open')}catch(e){status.textContent='Open failed: '+e.message}finally{openFileBtn.disabled=false}}
 openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');status.textContent='Not connected';owner.focus()});closeBtn.addEventListener('click',()=>panel.classList.remove('open'));testBtn.addEventListener('click',testConnection);openFileBtn.addEventListener('click',openGitHubFile);[owner,repo,branch,path].forEach(x=>x.addEventListener('change',saveConfig));
 })();
 </script>
