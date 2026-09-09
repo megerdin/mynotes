@@ -156,9 +156,9 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 
 </head>
 <body>
-<!-- ReaderEditor GitHub V4.1: Open repository files; HTML and plain-text support. -->
+<!-- ReaderEditor GitHub V5: Open, Save, and Save As repository files; HTML and plain-text support. -->
 <div id="toolbar"><button id="homeBtn" onclick="goHome()" title="Home / Index">⌂</button>
-<button id="githubBtn" title="GitHub">GitHub</button><span id="versionFlag">ReaderEditor GitHub V4.1</span>
+<button id="githubBtn" title="GitHub">GitHub</button><span id="versionFlag">ReaderEditor GitHub V5</span>
 <button onclick="prev()" title="Previous page">←</button><button onclick="next()" title="Next page">→</button>
 <input id="jump" min="1" title="Enter page number" type="number" value="1"/>
 <span id="pageInfo">Page …</span>
@@ -179,7 +179,7 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 <span class="edit-status" id="editStatus">Edit mode</span>
 </div>
 <div id="githubPanel" aria-label="GitHub connection">
-<h3>GitHub — V3.2</h3>
+<h3>GitHub — V5</h3>
 <label>Repository owner</label><input id="ghOwner" placeholder="username or organisation"/>
 <label>Repository</label><input id="ghRepo" placeholder="repository-name"/>
 <label>Branch</label><input id="ghBranch" value="main"/>
@@ -744,7 +744,12 @@ function goHome(){
     return await saveToHandle();
   }
 
-  function saveAs(){
+  async function saveAs(){
+    if(window.githubDocument && typeof window.githubSaveAs==='function'){
+      await window.githubSaveAs();
+      return;
+    }
+
     const blob=new Blob([cleanClone()],{type:'text/html;charset=utf-8'});
     const a=document.createElement('a');
     a.href=URL.createObjectURL(blob);
@@ -1073,7 +1078,77 @@ openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');s
     }
   }
 
+  async function saveGitHubAs(){
+    const d=window.githubDocument;
+    if(!d){
+      status.textContent='No GitHub file is open';
+      return false;
+    }
+
+    const t=(token.value||'').trim();
+    if(!t){
+      status.textContent='Enter a GitHub token with Contents write permission';
+      panel.classList.add('open');
+      token.focus();
+      return false;
+    }
+
+    const newPath=prompt('New GitHub file path:',d.path);
+    if(newPath===null)return false;
+    const p=newPath.trim();
+    if(!p){
+      status.textContent='File path cannot be empty';
+      return false;
+    }
+    if(p===d.path){
+      status.textContent='Save As needs a different file path';
+      return false;
+    }
+
+    const message=prompt('GitHub commit message:','Create '+p.split('/').pop());
+    if(message===null)return false;
+
+    status.textContent='Creating GitHub file…';
+
+    try{
+      const content=contentToSave();
+      const url='https://api.github.com/repos/'+
+        encodeURIComponent(d.owner)+'/'+encodeURIComponent(d.repo)+
+        '/contents/'+p.split('/').map(encodeURIComponent).join('/');
+
+      const res=await fetch(url,{
+        method:'PUT',
+        headers:headers(),
+        body:JSON.stringify({
+          message:message,
+          content:b64(content),
+          branch:d.branch
+        })
+      });
+
+      const data=await res.json().catch(()=>({}));
+
+      if(!res.ok){
+        throw new Error(data.message||('HTTP '+res.status));
+      }
+
+      d.path=p;
+      d.name=data.content?.name||p.split('/').pop();
+      d.sha=data.content?.sha||null;
+      d.raw=content;
+
+      status.textContent='Created on GitHub ✓';
+      const editStatus=document.getElementById('editStatus');
+      if(editStatus)editStatus.textContent='GitHub file created • '+p;
+      return true;
+    }catch(e){
+      status.textContent='GitHub Save As failed: '+e.message;
+      return false;
+    }
+  }
+
   window.githubSaveCurrent=saveGitHub;
+  window.githubSaveAs=saveGitHubAs;
 })();
 </script>
 </body></html>
