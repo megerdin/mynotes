@@ -156,9 +156,9 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 
 </head>
 <body>
-<!-- ReaderEditor GitHub V6.1: Open, Save, and Save As repository files; HTML and plain-text support. -->
+<!-- ReaderEditor GitHub V6.1.1: Open, Save, and Save As repository files; HTML and plain-text support. -->
 <div id="toolbar"><button id="homeBtn" onclick="goHome()" title="Home / Index">⌂</button>
-<button id="githubBtn" title="GitHub">GitHub</button><span id="versionFlag">ReaderEditor GitHub V6.1</span>
+<button id="githubBtn" title="GitHub">GitHub</button><span id="versionFlag">ReaderEditor GitHub V6.1.1</span>
 <button onclick="prev()" title="Previous page">←</button><button onclick="next()" title="Next page">→</button>
 <input id="jump" min="1" title="Enter page number" type="number" value="1"/>
 <span id="pageInfo">Page …</span>
@@ -180,7 +180,7 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 <span class="edit-status" id="editStatus">Edit mode</span>
 </div>
 <div id="githubPanel" aria-label="GitHub connection">
-<h3>GitHub — V6.1</h3>
+<h3>GitHub — V6.1.1</h3>
 <label>Repository owner</label><input id="ghOwner" placeholder="username or organisation"/>
 <label>Repository</label><input id="ghRepo" placeholder="repository-name"/>
 <label>Branch</label><input id="ghBranch" value="main"/>
@@ -1032,6 +1032,12 @@ openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');s
     const pages=document.getElementById('pages');
 
     if(!d.isHtml){
+      // Existing GitHub files keep the proven V6.0 exact-text path.
+      // New blank documents are edited through a contenteditable host, where
+      // textContent would remove the line/block boundaries created by Enter.
+      if(d.isNew && typeof currentHost!=='undefined' && currentHost){
+        return currentHost.innerText.replace(/\\r\\n/g,'\\n').replace(/\\r/g,'\\n');
+      }
       // Raw/text files are saved exactly as text, including blank lines.
       return pages.textContent;
     }
