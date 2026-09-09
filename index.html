@@ -156,9 +156,9 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 
 </head>
 <body>
-<!-- ReaderEditor GitHub V6: Open, Save, and Save As repository files; HTML and plain-text support. -->
+<!-- ReaderEditor GitHub V6.1: Open, Save, and Save As repository files; HTML and plain-text support. -->
 <div id="toolbar"><button id="homeBtn" onclick="goHome()" title="Home / Index">⌂</button>
-<button id="githubBtn" title="GitHub">GitHub</button><span id="versionFlag">ReaderEditor GitHub V6</span>
+<button id="githubBtn" title="GitHub">GitHub</button><span id="versionFlag">ReaderEditor GitHub V6.1</span>
 <button onclick="prev()" title="Previous page">←</button><button onclick="next()" title="Next page">→</button>
 <input id="jump" min="1" title="Enter page number" type="number" value="1"/>
 <span id="pageInfo">Page …</span>
@@ -180,7 +180,7 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 <span class="edit-status" id="editStatus">Edit mode</span>
 </div>
 <div id="githubPanel" aria-label="GitHub connection">
-<h3>GitHub — V6</h3>
+<h3>GitHub — V6.1</h3>
 <label>Repository owner</label><input id="ghOwner" placeholder="username or organisation"/>
 <label>Repository</label><input id="ghRepo" placeholder="repository-name"/>
 <label>Branch</label><input id="ghBranch" value="main"/>
@@ -438,10 +438,10 @@ function goHome(){
   }
 
   function makeHost(){
-    if(currentHost)return;
+    if(currentHost)return currentHost;
+
     const q=pageInfo();
     currentNodes=pageNodes();
-    if(!currentNodes.length)return;
 
     currentHost=document.createElement('div');
     currentHost.id='v62-current-page-edit-host';
@@ -449,8 +449,13 @@ function goHome(){
     currentHost.spellcheck=false;
 
     /*
-     * The host is transparent to layout: it inherits the exact typography
-     * used by the reader, but is only created for the current page.
+     * V62:
+     * The actual #pages element is NOT contenteditable.
+     * Existing document nodes are moved into one current-page host.
+     *
+     * V6.1:
+     * If there is no document content yet, create an empty host directly
+     * inside #pages so a new document is immediately writable.
      */
     currentHost.style.cssText=
       'position:relative;'+
@@ -467,18 +472,23 @@ function goHome(){
       'color:'+q.cs.color+';'+
       'background:transparent;';
 
+    if(!currentNodes.length){
+      pages().appendChild(currentHost);
+      currentHost.style.columnSpan='none';
+      return currentHost;
+    }
+
     /*
-     * Move the actual current-page nodes into the host rather than cloning
-     * them. This preserves their identity and lets the browser make one
-     * continuous selection across paragraphs.
+     * Existing-file behavior: move the actual current-page nodes into the
+     * host rather than cloning them.
      */
     const parent=currentNodes[0].parentNode;
     const before=currentNodes[currentNodes.length-1].nextSibling;
     parent.insertBefore(currentHost,before);
     currentNodes.forEach(n=>currentHost.appendChild(n));
 
-    // Keep the reader's normal column container from reflowing the editor.
     currentHost.style.columnSpan='none';
+    return currentHost;
   }
 
   function removeHost(){
@@ -746,6 +756,39 @@ function goHome(){
   }
 
   async function saveAs(){
+    if(!window.githubDocument){
+      const t=(document.getElementById('ghToken').value||'').trim();
+      if(!t){
+        document.getElementById('ghStatus').textContent='Enter a GitHub token with Contents write permission';
+        document.getElementById('githubPanel').classList.add('open');
+        document.getElementById('ghToken').focus();
+        return;
+      }
+      const o=document.getElementById('ghOwner').value.trim();
+      const r=document.getElementById('ghRepo').value.trim();
+      const b=document.getElementById('ghBranch').value.trim()||'main';
+      const answer=prompt('New GitHub file path:','newfile.txt');
+      if(answer===null)return;
+      const p=answer.trim();
+      if(!p)return;
+      const message=prompt('GitHub commit message:','Create '+p.split('/').pop());
+      if(message===null)return;
+      window.githubDocument={
+        owner:o,repo:r,branch:b,path:p,sha:null,
+        name:p.split('/').pop(),
+        isHtml:/\.(html?|xhtml)$/i.test(p),
+        raw:'',isNew:true,isBlankNew:true
+      };
+      document.getElementById('ghStatus').textContent='Creating GitHub file…';
+      try{
+        await createGitHubFile(window.githubDocument,p,message);
+      }catch(e){
+        window.githubDocument=null;
+        document.getElementById('ghStatus').textContent='GitHub Save As failed: '+e.message;
+      }
+      return;
+    }
+
     if(window.githubDocument && typeof window.githubSaveAs==='function'){
       await window.githubSaveAs();
       return;
@@ -762,13 +805,69 @@ function goHome(){
   }
 
   saveBtn.onclick=async()=>{
+    if(!window.githubDocument){
+      const t=(document.getElementById('ghToken').value||'').trim();
+      if(!t){
+        document.getElementById('ghStatus').textContent='Enter a GitHub token with Contents write permission';
+        document.getElementById('githubPanel').classList.add('open');
+        document.getElementById('ghToken').focus();
+        return;
+      }
+
+      const o=document.getElementById('ghOwner').value.trim();
+      const r=document.getElementById('ghRepo').value.trim();
+      const b=document.getElementById('ghBranch').value.trim()||'main';
+      if(!o||!r){
+        document.getElementById('ghStatus').textContent='Enter repository owner and repository name';
+        document.getElementById('githubPanel').classList.add('open');
+        return;
+      }
+
+      const answer=prompt('New GitHub file path:','newfile.txt');
+      if(answer===null)return;
+      const p=answer.trim();
+      if(!p)return;
+
+      const message=prompt('GitHub commit message:','Create '+p.split('/').pop());
+      if(message===null)return;
+
+      window.githubDocument={
+        owner:o,repo:r,branch:b,path:p,sha:null,
+        name:p.split('/').pop(),
+        isHtml:/\.(html?|xhtml)$/i.test(p),
+        raw:'',isNew:true,isBlankNew:true
+      };
+
+      document.getElementById('ghStatus').textContent='Creating GitHub file…';
+      try{
+        await createGitHubFile(window.githubDocument,p,message);
+        if(typeof invalidateMetrics==='function')invalidateMetrics();
+        if(typeof fitDiagrams==='function')fitDiagrams();
+      }catch(e){
+        window.githubDocument=null;
+        document.getElementById('ghStatus').textContent='GitHub save failed: '+e.message;
+      }
+      return;
+    }
+
     await saveCurrent();
   };
 
   saveAsBtn.onclick=saveAs;
 
   newBtn.onclick=async()=>{
-    await newGitHubFile();
+    const pages=document.getElementById('pages');
+    pages.replaceChildren();
+    window.githubDocument=null;
+
+    const host=makeHost();
+    if(host){
+      host.focus();
+      if(typeof invalidateMetrics==='function')invalidateMetrics();
+      if(typeof fitDiagrams==='function')fitDiagrams();
+      const editStatus=document.getElementById('editStatus');
+      if(editStatus)editStatus.textContent='New empty document';
+    }
   };
 
   openBtn.onclick=async()=>{
@@ -782,6 +881,12 @@ function goHome(){
   window.addEventListener('beforeunload',e=>{
     if(dirty){e.preventDefault();e.returnValue='';}
   });
+
+  // V6.1: the application opens with an in-memory blank editable document.
+  if(!window.githubDocument && !document.querySelector('#pages > *:not(.ccna-index)')){
+    const host=makeHost();
+    if(host)host.focus();
+  }
 })();
 </script>
 
@@ -1004,9 +1109,26 @@ openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');s
     return btoa(binary);
   }
 
+  function escapeHtml(value){
+    return String(value).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
   function contentToSave(){
     const d=window.githubDocument;
     const pages=document.getElementById('pages');
+
+    if(d && d.isBlankNew){
+      if(!d.isHtml){
+        // New raw/text files are saved exactly as text.
+        return pages.textContent;
+      }
+
+      // A new HTML file gets the same #pages contract used by the reader.
+      const bodyContent=pages.innerHTML;
+      return '<!DOCTYPE html>\\n<html><head><meta charset="utf-8"><title>'+
+        escapeHtml(d.name)+'</title></head><body><main id="pages">'+
+        bodyContent+'</main></body></html>';
+    }
 
     if(!d.isHtml){
       // Raw/text files are saved exactly as text, including blank lines.
