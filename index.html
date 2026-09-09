@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V7.0.1</title><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V6.2.0</title><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -151,21 +151,13 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 #githubPanel button:disabled{opacity:.55;cursor:wait}
 #githubPanel .gh-status{margin-top:9px;font-size:12px;color:var(--muted);min-height:16px}
 #versionFlag{margin-left:6px;padding:5px 8px;border:1px solid var(--border);border-radius:7px;color:var(--muted);font-size:12px;white-space:nowrap;line-height:1.2}
-#githubBrowser{margin-top:10px;border-top:1px solid var(--border);padding-top:10px}
-#githubBrowserHead{display:flex;gap:7px;align-items:center;justify-content:space-between}
-#githubBrowserPath{font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-#githubFileList{margin-top:7px;max-height:240px;overflow:auto;border:1px solid var(--border);border-radius:7px}
-.gh-file-item{display:block;width:100%;box-sizing:border-box;text-align:left;border:0!important;border-bottom:1px solid var(--border)!important;border-radius:0!important;padding:7px 9px!important;background:var(--paper)!important;color:var(--text)!important;cursor:pointer}
-.gh-file-item:last-child{border-bottom:0!important}
-.gh-file-item:hover{background:var(--code)!important}
-
 </style>
 
 </head>
 <body>
-<!-- ReaderEditor GitHub V7.0.1: Open, Save, Save As, and New repository files; HTML and plain-text support. -->
+<!-- ReaderEditor GitHub V6.2.0: Open, Save, Save As, and New repository files; HTML and plain-text support. -->
 <div id="toolbar"><button id="homeBtn" onclick="goHome()" title="Home / Index">⌂</button>
-<button id="githubBtn" title="GitHub">GitHub</button><span id="versionFlag">ReaderEditor GitHub V7.0.1</span>
+<button id="githubBtn" title="GitHub">GitHub</button><span id="versionFlag">ReaderEditor GitHub V6.2.0</span>
 <button onclick="prev()" title="Previous page">←</button><button onclick="next()" title="Next page">→</button>
 <input id="jump" min="1" title="Enter page number" type="number" value="1"/>
 <span id="pageInfo">Page …</span>
@@ -193,14 +185,7 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 <label>Branch</label><input id="ghBranch" value="main"/>
 <label>File path</label><input id="ghPath" placeholder="testfile"/>
 <label>GitHub token (optional for public files)</label><input id="ghToken" type="password" placeholder="fine-grained token" autocomplete="off"/>
-<div class="gh-row"><button id="ghTestBtn">Test Connection</button><button id="ghOpenBtn">Open GitHub File</button><button id="ghBrowseBtn">Browse Files</button><button id="ghCloseBtn">Close</button></div>
-<div id="githubBrowser">
-  <div id="githubBrowserHead">
-    <span id="githubBrowserPath">Repository root</span>
-    <button id="ghUpBtn" disabled>Up</button>
-  </div>
-  <div id="githubFileList"><div class="gh-status">Click Browse Files</div></div>
-</div>
+<div class="gh-row"><button id="ghTestBtn">Test Connection</button><button id="ghOpenBtn">Open GitHub File</button><button id="ghCloseBtn">Close</button></div>
 <div id="ghStatus" class="gh-status">Not connected</div>
 </div>
 <main id="reader"><div class="content" id="pages"></div></main>
@@ -1038,10 +1023,6 @@ const openBtn=document.getElementById('githubBtn');
 const closeBtn=document.getElementById('ghCloseBtn');
 const testBtn=document.getElementById('ghTestBtn');
 const openFileBtn=document.getElementById('ghOpenBtn');
-const browseBtn=document.getElementById('ghBrowseBtn');
-const upBtn=document.getElementById('ghUpBtn');
-const browserPath=document.getElementById('githubBrowserPath');
-const fileList=document.getElementById('githubFileList');
 const status=document.getElementById('ghStatus');
 const owner=document.getElementById('ghOwner');
 const repo=document.getElementById('ghRepo');
@@ -1056,95 +1037,10 @@ async function readJson(res){return await res.json().catch(()=>({}))}
 async function testConnection(){const o=owner.value.trim(),r=repo.value.trim();if(!o||!r){status.textContent='Enter repository owner and repository name';return}status.textContent='Testing connection…';try{const res=await fetch(apiBase(),{headers:headers()}),data=await readJson(res);if(!res.ok)throw new Error(data.message||('HTTP '+res.status));saveConfig();status.textContent='Connected ✓ '+data.full_name+(data.private?' • private':' • public')}catch(e){status.textContent='Connection failed: '+e.message}}
 function decodeBase64Utf8(v){const binary=atob(v.replace(/\s/g,''));const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));return new TextDecoder('utf-8').decode(bytes)}
 function isHtmlFile(p){return /\.(html?|xhtml)$/i.test(p)}
-function parentPath(p){const a=p.split('/').filter(Boolean);a.pop();return a.join('/')}
-function setBrowserPath(p){
-  browserPath.textContent=p||'Repository root';
-  upBtn.disabled=!p;
-}
-function renderBrowser(items,currentPath){
-  fileList.replaceChildren();
-  if(currentPath){
-    const back=document.createElement('button');
-    back.className='gh-file-item';
-    back.textContent='↩ ..';
-    back.onclick=()=>browseGitHubFiles(parentPath(currentPath));
-    fileList.appendChild(back);
-  }
-  const sorted=[...items].sort((a,b)=>{
-    if(a.type!==b.type)return a.type==='dir'?-1:1;
-    return a.name.localeCompare(b.name);
-  });
-  if(!sorted.length){
-    const empty=document.createElement('div');
-    empty.className='gh-status';
-    empty.style.padding='7px 9px';
-    empty.textContent='Empty directory';
-    fileList.appendChild(empty);
-    return;
-  }
-  sorted.forEach(item=>{
-    const b=document.createElement('button');
-    b.className='gh-file-item';
-    b.textContent=(item.type==='dir'?'📁 ':'📄 ')+item.name;
-    b.title=item.path;
-    b.onclick=()=>{
-      if(item.type==='dir'){
-        browseGitHubFiles(item.path);
-      }else{
-        path.value=item.path;
-        saveConfig();
-        openGitHubFile();
-      }
-    };
-    fileList.appendChild(b);
-  });
-}
-async function browseGitHubFiles(currentPath=''){
-  const o=owner.value.trim(),r=repo.value.trim(),b=branch.value.trim()||'main';
-  if(!o||!r){
-    status.textContent='Enter repository owner and repository name';
-    return;
-  }
-  saveConfig();
-  status.textContent='Loading GitHub files…';
-  browseBtn.disabled=true;
-  upBtn.disabled=true;
-  try{
-    const suffix=currentPath
-      ? '/contents/'+currentPath.split('/').map(encodeURIComponent).join('/')
-      : '/contents';
-    const url=apiBase()+suffix+'?ref='+encodeURIComponent(b);
-    const res=await fetch(url,{headers:headers()});
-    const data=await readJson(res);
-    if(!res.ok)throw new Error(data.message||('HTTP '+res.status));
-    if(!Array.isArray(data))throw new Error('Selected path is a file');
-    setBrowserPath(currentPath);
-    renderBrowser(data,currentPath);
-    status.textContent='Files loaded ✓';
-  }catch(e){
-    fileList.replaceChildren();
-    const err=document.createElement('div');
-    err.className='gh-status';
-    err.style.padding='7px 9px';
-    err.textContent='Browse failed: '+e.message;
-    fileList.appendChild(err);
-    status.textContent='Browse failed: '+e.message;
-  }finally{
-    browseBtn.disabled=false;
-    upBtn.disabled=!currentPath;
-  }
-}
-
 function loadHtmlContent(html){const doc=new DOMParser().parseFromString(html,'text/html');const source=doc.querySelector('#pages');if(source)return source.innerHTML;const body=doc.body;if(body){body.querySelectorAll('script').forEach(e=>e.remove());return body.innerHTML}return ''}
 function loadPlainText(text){const pre=document.createElement('pre');pre.className='code-block github-plain-text';pre.textContent=text;pre.style.whiteSpace='pre';pre.style.overflowX='auto';pre.style.overflowY='visible';pre.style.maxWidth='100%';pre.style.breakInside='auto';pre.style.columnBreakInside='auto';return pre}
-async function openGitHubFile(){if(typeof editing!=='undefined'&&editing&&typeof exitEditing==='function')exitEditing();const o=owner.value.trim(),r=repo.value.trim(),b=branch.value.trim()||'main',p=path.value.trim();if(!o||!r){status.textContent='Enter repository owner and repository name';return}if(!p){status.textContent='Enter the GitHub file path';return}saveConfig();status.textContent='Opening GitHub file…';openFileBtn.disabled=true;try{const url=apiBase()+'/contents/'+p.split('/').map(encodeURIComponent).join('/')+'?ref='+encodeURIComponent(b);const res=await fetch(url,{headers:headers()}),data=await readJson(res);if(!res.ok)throw new Error(data.message||('HTTP '+res.status));if(Array.isArray(data))throw new Error('Selected path is a directory; choose a file');if(!data.content)throw new Error('GitHub returned no file content');const raw=decodeBase64Utf8(data.content);const pages=document.getElementById('pages');pages.replaceChildren();if(isHtmlFile(p)){pages.innerHTML=loadHtmlContent(raw)}else{pages.appendChild(loadPlainText(raw))}window.githubDocument={owner:o,repo:r,branch:b,path:p,sha:data.sha||null,name:data.name||p.split('/').pop(),isHtml:isHtmlFile(p),raw:raw};if(typeof invalidateMetrics==='function')invalidateMetrics();if(typeof fitDiagrams==='function')fitDiagrams();if(typeof update==='function')update(true);if(typeof goHome==='function' && !window.location.hash){/* no-op: preserve V70 navigation */}status.textContent='Opened ✓ '+(data.path||p);const es=document.getElementById('editStatus');if(es)es.textContent='GitHub file loaded • '+(data.path||p);panel.classList.remove('open')}catch(e){status.textContent='Open failed: '+e.message}finally{openFileBtn.disabled=false}}
-openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');status.textContent='Not connected';fileList.replaceChildren();const d=document.createElement('div');d.className='gh-status';d.style.padding='7px 9px';d.textContent='Click Browse Files';fileList.appendChild(d);setBrowserPath('');owner.focus()});
-closeBtn.addEventListener('click',()=>panel.classList.remove('open'));
-testBtn.addEventListener('click',testConnection);
-openFileBtn.addEventListener('click',openGitHubFile);
-browseBtn.addEventListener('click',()=>browseGitHubFiles(''));
-upBtn.addEventListener('click',()=>browseGitHubFiles(parentPath(browserPath.textContent==='Repository root'?'':browserPath.textContent)));
-[owner,repo,branch,path].forEach(x=>x.addEventListener('change',saveConfig));
+async function openGitHubFile(){const o=owner.value.trim(),r=repo.value.trim(),b=branch.value.trim()||'main',p=path.value.trim();if(!o||!r){status.textContent='Enter repository owner and repository name';return}if(!p){status.textContent='Enter the GitHub file path';return}saveConfig();status.textContent='Opening GitHub file…';openFileBtn.disabled=true;try{const url=apiBase()+'/contents/'+p.split('/').map(encodeURIComponent).join('/')+'?ref='+encodeURIComponent(b);const res=await fetch(url,{headers:headers()}),data=await readJson(res);if(!res.ok)throw new Error(data.message||('HTTP '+res.status));if(Array.isArray(data))throw new Error('Selected path is a directory; choose a file');if(!data.content)throw new Error('GitHub returned no file content');const raw=decodeBase64Utf8(data.content);const pages=document.getElementById('pages');pages.replaceChildren();if(isHtmlFile(p)){pages.innerHTML=loadHtmlContent(raw)}else{pages.appendChild(loadPlainText(raw))}window.githubDocument={owner:o,repo:r,branch:b,path:p,sha:data.sha||null,name:data.name||p.split('/').pop(),isHtml:isHtmlFile(p),raw:raw};if(typeof invalidateMetrics==='function')invalidateMetrics();if(typeof fitDiagrams==='function')fitDiagrams();if(typeof update==='function')update(true);if(typeof goHome==='function' && !window.location.hash){/* no-op: preserve V70 navigation */}status.textContent='Opened ✓ '+(data.path||p);const es=document.getElementById('editStatus');if(es)es.textContent='GitHub file loaded • '+(data.path||p);panel.classList.remove('open')}catch(e){status.textContent='Open failed: '+e.message}finally{openFileBtn.disabled=false}}
+openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');status.textContent='Not connected';owner.focus()});closeBtn.addEventListener('click',()=>panel.classList.remove('open'));testBtn.addEventListener('click',testConnection);openFileBtn.addEventListener('click',openGitHubFile);[owner,repo,branch,path].forEach(x=>x.addEventListener('change',saveConfig));
 })();
 
 </script>
