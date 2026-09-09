@@ -1,0 +1,1 @@
+Application opens blank        ↓type:Line oneLine twoLine four        ↓Save        ↓new filename: v611-test.txt
