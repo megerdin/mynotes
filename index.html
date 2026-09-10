@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V9.3.8</title><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V9.4.0</title><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -165,9 +165,9 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 
 </head>
 <body>
-<!-- ReaderEditor GitHub V9.3.8: Open, Save, Save As, and New repository files; HTML and plain-text support. -->
+<!-- ReaderEditor GitHub V9.4.0: Session Persistence & Recovery. Open, Save, Save As, and New repository files; HTML and plain-text support. -->
 <div id="toolbar"><button id="homeBtn" onclick="goHome()" title="Home / Index">⌂</button>
-<button id="githubBtn" title="GitHub">GitHub</button><button id="newBtn" title="New document">New</button><span id="versionFlag">ReaderEditor GitHub V9.3.8</span><span id="htmlModeBadge"></span>
+<button id="githubBtn" title="GitHub">GitHub</button><button id="newBtn" title="New document">New</button><span id="versionFlag">ReaderEditor GitHub V9.4.0</span><span id="htmlModeBadge"></span>
 <button onclick="prev()" title="Previous page">←</button><button onclick="next()" title="Next page">→</button>
 <input id="jump" min="1" title="Enter page number" type="number" value="1"/>
 <span id="pageInfo">Page …</span>
@@ -1315,6 +1315,7 @@ async function openGitHubFile(){
     status.textContent='Opened ✓ '+(data.path||p);
     const es=document.getElementById('editStatus');
     if(es)es.textContent=html?(mode==='reader'?'HTML Reader loaded • '+(data.path||p):'Raw HTML loaded • '+(data.path||p)):'Raw text loaded • '+(data.path||p);
+    if(typeof window.readerEditorPersistSession==='function')window.readerEditorPersistSession();
     panel.classList.remove('open');
   }catch(e){
     status.textContent='Open failed: '+e.message;
@@ -1719,9 +1720,16 @@ async function persistSession(reason){
     dirty:!!window.readerEditorSessionDirty
   };
 
+  // Use a content hash, not content.length: two different edits can have
+  // exactly the same length and must still be persisted.
+  let contentHash=0x811c9dc5;
+  for(let i=0;i<content.length;i++){
+    contentHash^=content.charCodeAt(i);
+    contentHash=Math.imul(contentHash,0x01000193);
+  }
   const signature=[
     d.owner,d.repo,d.branch,d.path,d.sha,d.isHtml,d.htmlMode,
-    record.page,record.editing,record.dirty,content.length
+    record.page,record.editing,record.dirty,contentHash>>>0
   ].join('|');
 
   // Avoid repeatedly writing identical state during scroll/layout events.
@@ -1905,6 +1913,10 @@ function installObservers(){
     observer.observe(p,{subtree:true,childList:true,characterData:true,attributes:true});
   }
 }
+
+// Allow the existing GitHub open path to persist a newly opened file
+// immediately, without changing its loading or pagination logic.
+window.readerEditorPersistSession=()=>schedulePersist('open',20);
 
 async function init(){
   /*
