@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V9.3.3</title><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V9.3.4</title><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -165,9 +165,9 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 
 </head>
 <body>
-<!-- ReaderEditor GitHub V9.3.3: Open, Save, Save As, and New repository files; HTML and plain-text support. -->
+<!-- ReaderEditor GitHub V9.3.4: Open, Save, Save As, and New repository files; HTML and plain-text support. -->
 <div id="toolbar"><button id="homeBtn" onclick="goHome()" title="Home / Index">⌂</button>
-<button id="githubBtn" title="GitHub">GitHub</button><button id="newBtn" title="New document">New</button><span id="versionFlag">ReaderEditor GitHub V9.3.3</span><span id="htmlModeBadge"></span>
+<button id="githubBtn" title="GitHub">GitHub</button><button id="newBtn" title="New document">New</button><span id="versionFlag">ReaderEditor GitHub V9.3.4</span><span id="htmlModeBadge"></span>
 <button onclick="prev()" title="Previous page">←</button><button onclick="next()" title="Next page">→</button>
 <input id="jump" min="1" title="Enter page number" type="number" value="1"/>
 <span id="pageInfo">Page …</span>
@@ -454,6 +454,7 @@ function goHome(){
   let editing=false,fileHandle=null,dirty=false,savedRange=null;
   let currentHost=null,currentNodes=[];
   let rawEditing=false,rawEditScrollLeft=0,rawEditPage=1;
+  let rawEditor=null,rawText='',rawPageRanges=[];
 
   function pages(){return document.getElementById('pages');}
   function reader(){return document.getElementById('reader');}
@@ -468,14 +469,6 @@ function goHome(){
     return {p,r,cs,width,gap,pitch,rr,page,index:page-1};
   }
 
-  /*
-   * V62:
-   * The actual #pages element is NOT contenteditable.
-   * Only the existing DOM elements rendered inside the current CSS column
-   * are temporarily placed under one page-local editing host.
-   *
-   * No cloned visual page and no whole-document editing surface are used.
-   */
   function pageNodes(){
     const q=pageInfo(), left=q.rr.left+q.index*q.pitch, right=left+q.width;
     const top=q.rr.top, bottom=q.rr.bottom;
@@ -490,26 +483,151 @@ function goHome(){
     });
   }
 
+  /*
+   * Raw/TXT editing is page-local. The source remains a normal paginated
+   * <pre>; a separate textarea is used for the current visual page. This
+   * avoids the browser's unreliable caret behaviour inside one contenteditable
+   * element spanning CSS columns.
+   */
+  function rawLinePageRanges(pre,text){
+    const node=pre.firstChild;
+    if(!node || !text)return [{start:0,end:text.length,page:1}];
+
+    const q=pageInfo(), rr=q.rr, pitch=q.pitch;
+    const starts=[0];
+    for(let i=0;i<text.length;i++){
+      if(text.charCodeAt(i)===10)starts.push(i+1);
+    }
+
+    const groups=[];
+    let currentPage=1,currentStart=0;
+    for(let i=0;i<starts.length;i++){
+      const off=starts[i];
+      if(off>=text.length)break;
+      const range=document.createRange();
+      range.setStart(node,off);
+      range.setEnd(node,Math.min(text.length,off+1));
+      const rect=range.getBoundingClientRect();
+      if(!rect.width && !rect.height)continue;
+      const page=Math.max(1,Math.floor((rect.left-rr.left-q.cs.paddingLeft+1)/pitch)+1);
+      if(page!==currentPage){
+        groups.push({start:currentStart,end:off,page:currentPage});
+        currentStart=off;
+        currentPage=page;
+      }
+    }
+    groups.push({start:currentStart,end:text.length,page:currentPage});
+    return groups.length?groups:[{start:0,end:text.length,page:1}];
+  }
+
+  function rawRangeForPage(page){
+    if(!rawPageRanges.length)return {start:0,end:rawText.length};
+    const hit=rawPageRanges.find(x=>x.page===page);
+    if(hit)return {start:hit.start,end:hit.end};
+    const last=rawPageRanges[rawPageRanges.length-1];
+    return {start:last.start,end:last.end};
+  }
+
+  function rebuildRawPageRanges(pre,text){
+    rawPageRanges=rawLinePageRanges(pre,text);
+  }
+
+  function placeRawEditor(page,caretOffset){
+    if(!rawEditor)return;
+    const range=rawRangeForPage(page);
+    const local=Math.max(0,Math.min(range.end-range.start,(caretOffset??range.start)-range.start));
+    rawEditor.value=rawText.slice(range.start,range.end);
+    rawEditor.dataset.start=String(range.start);
+    rawEditor.dataset.end=String(range.end);
+    rawEditor.dataset.page=String(page);
+    rawEditor.selectionStart=rawEditor.selectionEnd=local;
+    rawEditor.focus({preventScroll:true});
+  }
+
+  function createRawEditor(){
+    if(rawEditor)return;
+    const q=pageInfo(), range=rawRangeForPage(rawEditPage);
+    rawEditor=document.createElement('textarea');
+    rawEditor.id='v62-raw-page-editor';
+    rawEditor.spellcheck=false;
+    rawEditor.wrap='off';
+    rawEditor.value=rawText.slice(range.start,range.end);
+    rawEditor.dataset.start=String(range.start);
+    rawEditor.dataset.end=String(range.end);
+    rawEditor.dataset.page=String(rawEditPage);
+    rawEditor.style.cssText=
+      'position:absolute;'+
+      'z-index:12;'+
+      'box-sizing:border-box;'+
+      'left:'+q.cs.paddingLeft+';'+
+      'top:'+q.cs.paddingTop+';'+
+      'width:'+q.width+'px;'+
+      'height:calc(100% - '+q.cs.paddingTop+' - '+q.cs.paddingBottom+');'+
+      'margin:0;'+
+      'padding:.55em;'+
+      'border:1px solid var(--accent);'+
+      'border-radius:8px;'+
+      'outline:none;'+
+      'resize:none;'+
+      'overflow:auto;'+
+      'white-space:pre;'+
+      'font-family:'+q.cs.fontFamily+';'+
+      'font-size:11px;'+
+      'line-height:1.32;'+
+      'color:var(--text);'+
+      'background:var(--code);';
+    reader().appendChild(rawEditor);
+    rawEditor.addEventListener('input',onRawEditorInput);
+    rawEditor.addEventListener('keydown',e=>e.stopPropagation());
+    rawEditor.focus({preventScroll:true});
+  }
+
+  function onRawEditorInput(){
+    if(!rawEditing||!rawEditor)return;
+    const oldStart=Number(rawEditor.dataset.start||0);
+    const oldEnd=Number(rawEditor.dataset.end||0);
+    const before=rawText.slice(0,oldStart);
+    const after=rawText.slice(oldEnd);
+    const value=rawEditor.value;
+    const caret=rawEditor.selectionStart;
+    rawText=before+value+after;
+    if(window.githubDocument)window.githubDocument.raw=rawText;
+
+    const pre=pages().querySelector(':scope > pre.github-plain-text');
+    if(pre){
+      pre.textContent=rawText;
+      invalidateMetrics();
+      rebuildRawPageRanges(pre,rawText);
+    }
+
+    const absoluteCaret=oldStart+caret;
+    const hit=rawPageRanges.find(x=>absoluteCaret>=x.start&&absoluteCaret<=x.end);
+    const targetPage=hit?hit.page:rawEditPage;
+    rawEditPage=targetPage;
+    rawEditScrollLeft=pageStart(targetPage);
+    reader().scrollLeft=rawEditScrollLeft;
+    placeRawEditor(targetPage,absoluteCaret);
+    if(typeof update==='function')update(true);
+    markDirty();
+  }
+
   function makeHost(){
     if(currentHost)return;
     const q=pageInfo();
     const p=q.p;
     const rawPre=p.querySelector(':scope > pre.github-plain-text');
 
-    /*
-     * Raw/TXT documents are one continuous <pre>.  Moving that single node
-     * into the page-local V62 host causes CSS multicolumn reflow after every
-     * keystroke.  Keep it in #pages and edit it in place instead.
-     */
     if(rawPre && window.githubDocument &&
        (!window.githubDocument.isHtml || window.githubDocument.htmlMode==='raw')){
       rawEditing=true;
       rawEditScrollLeft=q.r.scrollLeft;
       rawEditPage=q.page;
-      rawPre.contentEditable='true';
-      rawPre.spellcheck=false;
-      rawPre.focus({preventScroll:true});
-      currentHost=rawPre;
+      rawText=rawPre.textContent||'';
+      rawPre.removeAttribute('contenteditable');
+      rawPre.removeAttribute('spellcheck');
+      rebuildRawPageRanges(rawPre,rawText);
+      createRawEditor();
+      currentHost=rawEditor;
       currentNodes=[rawPre];
       return;
     }
@@ -548,11 +666,15 @@ function goHome(){
   function removeHost(){
     if(!currentHost)return;
     if(rawEditing){
-      currentHost.removeAttribute('contenteditable');
-      currentHost.removeAttribute('spellcheck');
+      const pre=pages().querySelector(':scope > pre.github-plain-text');
+      if(pre)pre.textContent=rawText;
+      rawEditor?.remove();
+      rawEditor=null;
       currentHost=null;
       currentNodes=[];
       rawEditing=false;
+      rawPageRanges=[];
+      rawText='';
       return;
     }
     const parent=currentHost.parentNode;
@@ -564,6 +686,7 @@ function goHome(){
   }
 
   function rememberSelection(){
+    if(rawEditing)return;
     const sel=window.getSelection();
     if(!sel||!sel.rangeCount||sel.isCollapsed)return;
     if(currentHost && currentHost.contains(sel.anchorNode) && currentHost.contains(sel.focusNode))
@@ -571,6 +694,7 @@ function goHome(){
   }
 
   function restoreSelection(){
+    if(rawEditing)return false;
     if(!savedRange)return false;
     const sel=window.getSelection();
     sel.removeAllRanges();
@@ -592,7 +716,13 @@ function goHome(){
 
       if(currentHost){
         currentHost.focus({preventScroll:true});
-        if(rawEditing)reader().scrollLeft=rawEditScrollLeft;
+        if(rawEditing){
+          reader().scrollLeft=rawEditScrollLeft;
+          requestAnimationFrame(()=>{
+            reader().scrollLeft=rawEditScrollLeft;
+            if(rawEditor)placeRawEditor(rawEditPage,Number(rawEditor.dataset.start||0));
+          });
+        }
         editBtn.textContent='✓';
         editBtn.title='Exit editing mode';
         status.textContent=fileHandle?'Editing • file selected':'Editing • choose Open to enable same-file Save';
@@ -619,38 +749,6 @@ function goHome(){
     document.activeElement?.blur();
     recalcAfterContentChange();
   }
-
-  document.addEventListener('input',()=>{
-    if(!editing || !rawEditing)return;
-    const r=reader();
-    const keep=rawEditScrollLeft;
-    requestAnimationFrame(()=>{
-      r.scrollLeft=keep;
-      rawEditScrollLeft=keep;
-      if(typeof update==='function')update(true);
-      markDirty();
-    });
-  });
-
-  document.addEventListener('keydown',e=>{
-    if(!editing || !rawEditing || !currentHost || e.key!=='Enter')return;
-    const pre=currentHost;
-    const sel=window.getSelection();
-    if(!sel||!sel.rangeCount||!pre.contains(sel.anchorNode))return;
-    e.preventDefault();
-    e.stopImmediatePropagation();
-    const range=sel.getRangeAt(0);
-    range.deleteContents();
-    const node=document.createTextNode('\n');
-    range.insertNode(node);
-    range.setStartAfter(node);
-    range.collapse(true);
-    sel.removeAllRanges();
-    sel.addRange(range);
-    markDirty();
-    const keep=rawEditScrollLeft;
-    requestAnimationFrame(()=>{reader().scrollLeft=keep;rawEditScrollLeft=keep;update(true);});
-  },true);
 
   editBtn.onclick=()=>setEditing(!editing);
 
