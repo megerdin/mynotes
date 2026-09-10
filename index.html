@@ -1580,8 +1580,348 @@ upBtn.addEventListener('click',()=>browseGitHubFiles(parentPath(browserPath.text
     }
   }
 
+  // V9.4.0 session persistence hook: expose the existing serializer only.
+  // Save/Save As behavior itself is unchanged.
+  window.githubGetCurrentContent=contentToSave;
   window.githubSaveCurrent=saveGitHub;
   window.githubSaveAs=saveGitHubAs;
 })();
 </script>
+
+<script id="v94-session-persistence">
+(function(){
+'use strict';
+
+/*
+ * V9.4.0 — Session Persistence & Recovery
+ *
+ * Purpose:
+ *   Keep the currently opened document, current mode, current page and
+ *   unsaved content across a browser reload.
+ *
+ * Deliberately does NOT:
+ *   - change raw/reader pagination
+ *   - change the editing architecture
+ *   - store the GitHub token
+ *   - replace GitHub Save / Save As
+ *
+ * One active working session is stored locally in IndexedDB.
+ */
+
+const DB_NAME='ReaderEditorSessionV94';
+const DB_VERSION=1;
+const STORE='session';
+const SESSION_KEY='active';
+let dbPromise=null;
+let sessionReady=false;
+let restoreInProgress=false;
+let persistTimer=0;
+let lastSignature='';
+
+function openSessionDB(){
+  if(dbPromise)return dbPromise;
+  dbPromise=new Promise((resolve,reject)=>{
+    if(!window.indexedDB){reject(new Error('IndexedDB unavailable'));return;}
+    const req=indexedDB.open(DB_NAME,DB_VERSION);
+    req.onupgradeneeded=()=>{
+      const db=req.result;
+      if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE);
+    };
+    req.onsuccess=()=>resolve(req.result);
+    req.onerror=()=>reject(req.error||new Error('IndexedDB open failed'));
+  });
+  return dbPromise;
+}
+
+async function dbGet(){
+  const db=await openSessionDB();
+  return await new Promise((resolve,reject)=>{
+    const tx=db.transaction(STORE,'readonly');
+    const req=tx.objectStore(STORE).get(SESSION_KEY);
+    req.onsuccess=()=>resolve(req.result||null);
+    req.onerror=()=>reject(req.error);
+  });
+}
+
+async function dbPut(value){
+  const db=await openSessionDB();
+  return await new Promise((resolve,reject)=>{
+    const tx=db.transaction(STORE,'readwrite');
+    tx.objectStore(STORE).put(value,SESSION_KEY);
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error);
+  });
+}
+
+async function dbClear(){
+  try{
+    const db=await openSessionDB();
+    await new Promise((resolve,reject)=>{
+      const tx=db.transaction(STORE,'readwrite');
+      tx.objectStore(STORE).delete(SESSION_KEY);
+      tx.oncomplete=()=>resolve();
+      tx.onerror=()=>reject(tx.error);
+    });
+  }catch(e){}
+}
+
+function documentDescriptor(){
+  const d=window.githubDocument;
+  if(!d)return null;
+  return {
+    owner:d.owner||'',
+    repo:d.repo||'',
+    branch:d.branch||'main',
+    path:d.path||'',
+    sha:d.sha||null,
+    name:d.name||'',
+    isHtml:!!d.isHtml,
+    htmlMode:d.htmlMode||null,
+    raw:d.raw||''
+  };
+}
+
+function currentContent(){
+  try{
+    if(typeof window.githubGetCurrentContent==='function'){
+      return window.githubGetCurrentContent();
+    }
+  }catch(e){}
+  return null;
+}
+
+function currentPageNumber(){
+  try{
+    if(typeof currentPage==='function')return currentPage();
+  }catch(e){}
+  return 1;
+}
+
+async function persistSession(reason){
+  if(!sessionReady || restoreInProgress || !window.githubDocument)return;
+  const d=documentDescriptor();
+  if(!d)return;
+
+  const content=currentContent();
+  if(content===null)return;
+
+  const page=currentPageNumber();
+  const editing=document.body.classList.contains('editing');
+
+  const record={
+    version:1,
+    savedAt:Date.now(),
+    reason:reason||'change',
+    document:d,
+    content:content,
+    page:Math.max(1,Number(page)||1),
+    editing:editing,
+    dirty:!!window.readerEditorSessionDirty
+  };
+
+  const signature=[
+    d.owner,d.repo,d.branch,d.path,d.sha,d.isHtml,d.htmlMode,
+    record.page,record.editing,record.dirty,content.length
+  ].join('|');
+
+  // Avoid repeatedly writing identical state during scroll/layout events.
+  if(signature===lastSignature)return;
+  lastSignature=signature;
+
+  try{await dbPut(record);}catch(e){}
+}
+
+function schedulePersist(reason,delay=180){
+  if(!sessionReady || restoreInProgress)return;
+  clearTimeout(persistTimer);
+  persistTimer=setTimeout(()=>persistSession(reason),delay);
+}
+
+function installSaveHooks(){
+  /*
+   * The existing GitHub Save / Save As functions remain authoritative.
+   * We only observe their result so a successful GitHub save clears the
+   * session's unsaved flag.
+   */
+  const wrap=(name)=>{
+    const original=window[name];
+    if(typeof original!=='function')return;
+    if(original.__v94Wrapped)return;
+    const wrapped=async function(){
+      const ok=await original.apply(this,arguments);
+      if(ok){
+        window.readerEditorSessionDirty=false;
+        lastSignature='';
+        schedulePersist('github-save',20);
+      }
+      return ok;
+    };
+    wrapped.__v94Wrapped=true;
+    window[name]=wrapped;
+  };
+  wrap('githubSaveCurrent');
+  wrap('githubSaveAs');
+}
+
+async function restoreSession(){
+  let record=null;
+  try{record=await dbGet();}catch(e){return;}
+
+  if(!record || !record.document || typeof record.content!=='string')return;
+
+  restoreInProgress=true;
+
+  try{
+    const d=record.document;
+    const pagesEl=document.getElementById('pages');
+    if(!pagesEl)return;
+
+    if(document.body.classList.contains('editing') &&
+       typeof exitEditing==='function'){
+      exitEditing();
+    }
+
+    pagesEl.replaceChildren();
+
+    if(d.isHtml && d.htmlMode==='reader'){
+      /*
+       * Reader mode stores the complete HTML document produced by the
+       * existing Save serializer. Extract the same #pages/body content
+       * using the existing loader.
+       */
+      if(typeof loadHtmlContent==='function'){
+        pagesEl.innerHTML=loadHtmlContent(record.content);
+      }else{
+        const parsed=new DOMParser().parseFromString(record.content,'text/html');
+        pagesEl.innerHTML=parsed.body?.innerHTML||'';
+      }
+    }else{
+      const pre=document.createElement('pre');
+      pre.className='github-plain-text';
+      pre.textContent=record.content;
+      pre.style.display='block';
+      pre.style.boxSizing='border-box';
+      pre.style.width='100%';
+      pre.style.maxWidth='100%';
+      pre.style.margin='.45em 0 .55em';
+      pre.style.padding='.55em .55em';
+      pre.style.border='1px solid var(--border)';
+      pre.style.borderRadius='8px';
+      pre.style.background='var(--code)';
+      pre.style.fontFamily='ui-monospace,SFMono-Regular,Menlo,Monaco,"Liberation Mono","Noto Sans Mono",monospace';
+      pre.style.fontSize='11px';
+      pre.style.lineHeight='1.32';
+      pre.style.whiteSpace='pre-wrap';
+      pre.style.overflowX='visible';
+      pre.style.overflowY='visible';
+      pre.style.breakInside='auto';
+      pre.style.columnBreakInside='auto';
+      pre.style.color='var(--text)';
+      pre.style.tabSize='4';
+      pagesEl.appendChild(pre);
+    }
+
+    window.githubDocument={
+      owner:d.owner||'',
+      repo:d.repo||'',
+      branch:d.branch||'main',
+      path:d.path||'',
+      sha:d.sha||null,
+      name:d.name||'',
+      isHtml:!!d.isHtml,
+      htmlMode:d.htmlMode||null,
+      raw:(d.htmlMode==='raw'||!d.isHtml)?record.content:(d.raw||record.content)
+    };
+
+    if(typeof setHtmlModeBadge==='function'){
+      setHtmlModeBadge(d.isHtml?(d.htmlMode||'raw'):null);
+    }
+
+    window.readerEditorSessionDirty=!!record.dirty;
+
+    if(typeof invalidateMetrics==='function')invalidateMetrics();
+    if(typeof fitDiagrams==='function')fitDiagrams();
+
+    await new Promise(resolve=>{
+      requestAnimationFrame(()=>requestAnimationFrame(resolve));
+    });
+
+    if(typeof recalcAfterContentChange==='function')recalcAfterContentChange();
+
+    await new Promise(resolve=>setTimeout(resolve,220));
+
+    const target=Math.max(1,Math.min(
+      typeof pageCount==='function'?pageCount():1,
+      Number(record.page)||1
+    ));
+
+    if(typeof go==='function'){
+      go(target);
+    }else if(typeof reader!=='undefined'){
+      reader.scrollLeft=Math.max(0,(target-1)*(reader.clientWidth||1));
+    }
+
+    const status=document.getElementById('editStatus');
+    if(status){
+      if(record.dirty)status.textContent='Recovered session • Unsaved changes';
+      else status.textContent='Recovered session • '+(d.name||d.path||'document');
+    }
+
+    lastSignature='';
+  }catch(e){
+    console.warn('ReaderEditor session restore failed:',e);
+  }finally{
+    restoreInProgress=false;
+  }
+}
+
+function installObservers(){
+  document.addEventListener('input',()=>{
+    if(document.body.classList.contains('editing')){
+      window.readerEditorSessionDirty=true;
+      schedulePersist('edit',120);
+    }
+  },true);
+
+  document.addEventListener('click',e=>{
+    if(e.target.closest('#editBtn'))schedulePersist('edit-mode',80);
+  },true);
+
+  const r=document.getElementById('reader');
+  if(r){
+    r.addEventListener('scroll',()=>schedulePersist('page',220),{passive:true});
+    if('onscrollend' in r){
+      r.addEventListener('scrollend',()=>schedulePersist('page',20),{passive:true});
+    }
+  }
+
+  const p=document.getElementById('pages');
+  if(p){
+    const observer=new MutationObserver(()=>{
+      if(!restoreInProgress && window.githubDocument && document.body.classList.contains('editing')){
+        schedulePersist('content',180);
+      }
+    });
+    observer.observe(p,{subtree:true,childList:true,characterData:true,attributes:true});
+  }
+}
+
+async function init(){
+  /*
+   * Wait until V9.3.8's existing initial pagination/page restoration has
+   * completed. We do not alter that engine; we restore on top of it.
+   */
+  await new Promise(resolve=>setTimeout(resolve,420));
+  installSaveHooks();
+  await restoreSession();
+  sessionReady=true;
+  installObservers();
+  schedulePersist('ready',80);
+}
+
+window.addEventListener('load',()=>setTimeout(init,20));
+
+})();
+</script>
+
 </body></html>
