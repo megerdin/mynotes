@@ -165,9 +165,9 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 
 </head>
 <body>
-<!-- ReaderEditor GitHub V9.4.2: Session Persistence & GitHub connection recovery. Open, Save, Save As, and New repository files; HTML and plain-text support. -->
+<!-- ReaderEditor GitHub V9.4.3: Session Persistence & GitHub connection recovery. Open, Save, Save As, and New repository files; HTML and plain-text support. -->
 <div id="toolbar"><button id="homeBtn" onclick="goHome()" title="Home / Index">⌂</button>
-<button id="githubBtn" title="GitHub">GitHub</button><button id="newBtn" title="New document">New</button><button id="localOpenBtn" title="Open a local file">Open</button><span id="versionFlag">ReaderEditor GitHub V9.4.2</span><span id="htmlModeBadge"></span>
+<button id="githubBtn" title="GitHub">GitHub</button><button id="newBtn" title="New document">New</button><button id="localOpenBtn" title="Open a local file">Open</button><span id="versionFlag">ReaderEditor GitHub V9.4.3</span><span id="htmlModeBadge"></span>
 <button onclick="prev()" title="Previous page">←</button><button onclick="next()" title="Next page">→</button>
 <input id="jump" min="1" title="Enter page number" type="number" value="1"/>
 <span id="pageInfo">Page …</span>
@@ -1698,7 +1698,7 @@ loadConfig();
     }
   }
 
-  // V9.4.2 session persistence hook: expose the existing serializer only.
+  // V9.4.3 session persistence hook: expose the existing serializer only.
   // Save/Save As behavior itself is unchanged.
   window.githubGetCurrentContent=contentToSave;
   window.githubSaveCurrent=saveGitHub;
@@ -1711,7 +1711,7 @@ loadConfig();
 'use strict';
 
 /*
- * V9.4.0 — Session Persistence & Recovery
+ * V9.4.3 — Session Persistence & Recovery
  *
  * Purpose:
  *   Keep the currently opened document, current mode, current page and
@@ -1721,9 +1721,10 @@ loadConfig();
  *   - change raw/reader pagination
  *   - change the editing architecture
  *   - store the GitHub token
+ *   - persist local file handles (browser security prevents reliable restoration)
  *   - replace GitHub Save / Save As
  *
- * One active working session is stored locally in IndexedDB.
+ * One active working session is stored locally in IndexedDB for both GitHub and local files.
  */
 
 const DB_NAME='ReaderEditorSessionV94';
@@ -1784,19 +1785,33 @@ async function dbClear(){
 }
 
 function documentDescriptor(){
-  const d=window.githubDocument;
-  if(!d)return null;
-  return {
-    owner:d.owner||'',
-    repo:d.repo||'',
-    branch:d.branch||'main',
-    path:d.path||'',
-    sha:d.sha||null,
-    name:d.name||'',
-    isHtml:!!d.isHtml,
-    htmlMode:d.htmlMode||null,
-    raw:d.raw||''
-  };
+  if(window.githubDocument){
+    const d=window.githubDocument;
+    return {
+      source:'github',
+      owner:d.owner||'',
+      repo:d.repo||'',
+      branch:d.branch||'main',
+      path:d.path||'',
+      sha:d.sha||null,
+      name:d.name||'',
+      isHtml:!!d.isHtml,
+      htmlMode:d.htmlMode||null,
+      raw:d.raw||''
+    };
+  }
+  if(window.localDocument){
+    const d=window.localDocument;
+    return {
+      source:'local',
+      owner:'',repo:'',branch:'main',path:'',sha:null,
+      name:d.name||'',
+      isHtml:!!d.isHtml,
+      htmlMode:d.htmlMode||null,
+      raw:d.raw||''
+    };
+  }
+  return null;
 }
 
 function currentContent(){
@@ -1816,7 +1831,7 @@ function currentPageNumber(){
 }
 
 async function persistSession(reason){
-  if(!sessionReady || restoreInProgress || !window.githubDocument)return;
+  if(!sessionReady || restoreInProgress || (!window.githubDocument && !window.localDocument))return;
   const d=documentDescriptor();
   if(!d)return;
 
@@ -1946,17 +1961,31 @@ async function restoreSession(){
       pagesEl.appendChild(pre);
     }
 
-    window.githubDocument={
-      owner:d.owner||'',
-      repo:d.repo||'',
-      branch:d.branch||'main',
-      path:d.path||'',
-      sha:d.sha||null,
-      name:d.name||'',
-      isHtml:!!d.isHtml,
-      htmlMode:d.htmlMode||null,
-      raw:(d.htmlMode==='raw'||!d.isHtml)?record.content:(d.raw||record.content)
-    };
+    if(d.source==='local'){
+      window.githubDocument=null;
+      window.localDocument={
+        name:d.name||'local-file',
+        isHtml:!!d.isHtml,
+        htmlMode:d.htmlMode||null,
+        raw:(d.htmlMode==='raw'||!d.isHtml)?record.content:(d.raw||record.content)
+      };
+      // A FileSystemFileHandle cannot safely be persisted here. Save will
+      // ask the user to select the local file again after a full reload.
+      fileHandle=null;
+    }else{
+      window.localDocument=null;
+      window.githubDocument={
+        owner:d.owner||'',
+        repo:d.repo||'',
+        branch:d.branch||'main',
+        path:d.path||'',
+        sha:d.sha||null,
+        name:d.name||'',
+        isHtml:!!d.isHtml,
+        htmlMode:d.htmlMode||null,
+        raw:(d.htmlMode==='raw'||!d.isHtml)?record.content:(d.raw||record.content)
+      };
+    }
 
     if(typeof setHtmlModeBadge==='function'){
       setHtmlModeBadge(d.isHtml?(d.htmlMode||'raw'):null);
@@ -2023,7 +2052,7 @@ function installObservers(){
   const p=document.getElementById('pages');
   if(p){
     const observer=new MutationObserver(()=>{
-      if(!restoreInProgress && window.githubDocument && document.body.classList.contains('editing')){
+      if(!restoreInProgress && (window.githubDocument || window.localDocument) && document.body.classList.contains('editing')){
         schedulePersist('content',180);
       }
     });
