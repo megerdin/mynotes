@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title><script>const APP_VERSION='9.4.9';</script><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title><script>const APP_VERSION='9.4.10';</script><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -313,7 +313,7 @@ function update(force=false){
   if(location.hash!==hash) history.replaceState(null,'',location.pathname+location.search+hash);
   // Persist the logical page whenever the page tracker confirms it. This
   // keeps local and GitHub documents on the same page-persistence path.
-  if(typeof schedulePersist==='function') schedulePersist('page',20);
+  if(typeof window.readerEditorSchedulePersist==='function') window.readerEditorSchedulePersist('page',20);
 }
 function go(n){
   n=Math.max(1,Math.min(pageCount(),Number(n)||1));
@@ -2139,11 +2139,23 @@ async function restoreSession(){
       Number(record.page)||1
     ));
 
-    if(typeof go==='function'){
+    if(typeof pageStart==='function' && typeof reader!=='undefined'){
+      // The restored session is authoritative. Set the exact scroll position
+      // immediately so a stale URL hash cannot win after reload.
+      reader.scrollLeft=pageStart(target);
+      if(typeof update==='function')update(true);
+    }else if(typeof go==='function'){
       go(target);
     }else if(typeof reader!=='undefined'){
       reader.scrollLeft=Math.max(0,(target-1)*(reader.clientWidth||1));
     }
+
+    // Keep the URL aligned with the restored document/page, replacing any
+    // hash that belonged to the previously opened document.
+    try{
+      const hash='#page='+target;
+      if(location.hash!==hash)history.replaceState(null,'',location.pathname+location.search+hash);
+    }catch(e){}
 
     const status=document.getElementById('editStatus');
     if(status){
@@ -2192,6 +2204,7 @@ function installObservers(){
 
 // Allow the existing GitHub open path to persist a newly opened file
 // immediately, without changing its loading or pagination logic.
+window.readerEditorSchedulePersist=(reason,delay=180)=>schedulePersist(reason,delay);
 window.readerEditorPersistSession=()=>schedulePersist('open',20);
 
 async function init(){
