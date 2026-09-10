@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V9.4.0</title><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V9.4.1</title><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -165,9 +165,9 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 
 </head>
 <body>
-<!-- ReaderEditor GitHub V9.4.0: Session Persistence & Recovery. Open, Save, Save As, and New repository files; HTML and plain-text support. -->
+<!-- ReaderEditor GitHub V9.4.1: Session Persistence & GitHub connection recovery. Open, Save, Save As, and New repository files; HTML and plain-text support. -->
 <div id="toolbar"><button id="homeBtn" onclick="goHome()" title="Home / Index">⌂</button>
-<button id="githubBtn" title="GitHub">GitHub</button><button id="newBtn" title="New document">New</button><span id="versionFlag">ReaderEditor GitHub V9.4.0</span><span id="htmlModeBadge"></span>
+<button id="githubBtn" title="GitHub">GitHub</button><button id="newBtn" title="New document">New</button><span id="versionFlag">ReaderEditor GitHub V9.4.1</span><span id="htmlModeBadge"></span>
 <button onclick="prev()" title="Previous page">←</button><button onclick="next()" title="Next page">→</button>
 <input id="jump" min="1" title="Enter page number" type="number" value="1"/>
 <span id="pageInfo">Page …</span>
@@ -1140,8 +1140,31 @@ const repo=document.getElementById('ghRepo');
 const branch=document.getElementById('ghBranch');
 const path=document.getElementById('ghPath');
 const token=document.getElementById('ghToken');
-function loadConfig(){try{const c=JSON.parse(localStorage.getItem('ccnaGithubConfig')||'{}');owner.value=c.owner||'';repo.value=c.repo||'';branch.value=c.branch||'main';path.value=c.path||''}catch(e){}}
-function saveConfig(){localStorage.setItem('ccnaGithubConfig',JSON.stringify({owner:owner.value.trim(),repo:repo.value.trim(),branch:branch.value.trim()||'main',path:path.value.trim()}))}
+function loadConfig(){
+  try{
+    const c=JSON.parse(localStorage.getItem('ccnaGithubConfig')||'{}');
+    owner.value=c.owner||'';
+    repo.value=c.repo||'';
+    branch.value=c.branch||'main';
+    path.value=c.path||'';
+  }catch(e){}
+  try{token.value=sessionStorage.getItem('ccnaGithubToken')||''}catch(e){}
+}
+function saveConfig(){
+  try{
+    localStorage.setItem('ccnaGithubConfig',JSON.stringify({
+      owner:owner.value.trim(),
+      repo:repo.value.trim(),
+      branch:branch.value.trim()||'main',
+      path:path.value.trim()
+    }));
+  }catch(e){}
+  try{
+    const t=token.value.trim();
+    if(t)sessionStorage.setItem('ccnaGithubToken',t);
+    else sessionStorage.removeItem('ccnaGithubToken');
+  }catch(e){}
+}
 function apiBase(){return 'https://api.github.com/repos/'+encodeURIComponent(owner.value.trim())+'/'+encodeURIComponent(repo.value.trim())}
 function headers(){const h={'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};if(token.value.trim())h.Authorization='Bearer '+token.value.trim();return h}
 async function readJson(res){return await res.json().catch(()=>({}))}
@@ -1330,7 +1353,9 @@ testBtn.addEventListener('click',testConnection);
 openFileBtn.addEventListener('click',openGitHubFile);
 browseBtn.addEventListener('click',()=>browseGitHubFiles(''));
 upBtn.addEventListener('click',()=>browseGitHubFiles(parentPath(browserPath.textContent==='Repository root'?'':browserPath.textContent)));
-[owner,repo,branch,path].forEach(x=>x.addEventListener('change',saveConfig));
+[owner,repo,branch,path,token].forEach(x=>x.addEventListener('input',saveConfig));
+[owner,repo,branch,path,token].forEach(x=>x.addEventListener('change',saveConfig));
+loadConfig();
 })();
 
 </script>
@@ -1581,7 +1606,7 @@ upBtn.addEventListener('click',()=>browseGitHubFiles(parentPath(browserPath.text
     }
   }
 
-  // V9.4.0 session persistence hook: expose the existing serializer only.
+  // V9.4.1 session persistence hook: expose the existing serializer only.
   // Save/Save As behavior itself is unchanged.
   window.githubGetCurrentContent=contentToSave;
   window.githubSaveCurrent=saveGitHub;
