@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title><script>const APP_VERSION='9.4.10';</script><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title><script>const APP_VERSION='9.4.11';</script><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -313,7 +313,7 @@ function update(force=false){
   if(location.hash!==hash) history.replaceState(null,'',location.pathname+location.search+hash);
   // Persist the logical page whenever the page tracker confirms it. This
   // keeps local and GitHub documents on the same page-persistence path.
-  if(typeof schedulePersist==='function') schedulePersist('page',20);
+  if(typeof window.readerEditorPersistPage==='function') window.readerEditorPersistPage(p);
 }
 function go(n){
   n=Math.max(1,Math.min(pageCount(),Number(n)||1));
@@ -1323,12 +1323,12 @@ function syntaxLanguage(name){
 function escapeSyntaxHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function syntaxPattern(lang){
   const common={
-    python:'and|as|assert|async|await|break|case|class|continue|def|del|elif|else|except|False|finally|for|from|global|if|import|in|is|lambda|match|None|nonlocal|not|or|pass|raise|return|True|try|while|with|yield',
-    javascript:'as|async|await|break|case|catch|class|const|continue|debugger|default|delete|do|else|export|extends|false|finally|for|from|function|get|if|import|in|instanceof|let|new|null|of|return|set|static|super|switch|this|throw|true|try|typeof|var|void|while|with|yield',
-    java:'abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|do|double|else|enum|extends|final|finally|float|for|if|implements|import|instanceof|int|interface|long|native|new|null|package|private|protected|public|return|short|static|strictfp|super|switch|synchronized|this|throw|throws|transient|true|false|try|void|volatile|while',
+    python:'and|as|assert|async|await|break|case|class|continue|def|del|elif|else|except|False|finally|for|from|global|if|import|in|is|lambda|match|None|nonlocal|not|or|pass|raise|return|True|try|while|with|yield|self',
+    javascript:'as|async|await|break|case|catch|class|const|continue|debugger|default|delete|do|else|export|extends|false|finally|for|from|function|get|if|import|in|instanceof|let|new|null|of|return|set|static|super|switch|this|throw|true|try|typeof|var|void|while|with|yield|undefined|NaN',
+    java:'abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|do|double|else|enum|extends|final|finally|float|for|if|implements|import|instanceof|int|interface|long|native|new|null|package|private|protected|public|return|short|static|strictfp|super|switch|synchronized|this|throw|throws|transient|true|false|try|void|volatile|while|var|record',
     json:'true|false|null',
-    bash:'if|then|else|elif|fi|for|while|in|do|done|case|esac|function|select|time|until',
-    css:'important',
+    bash:'if|then|else|elif|fi|for|while|in|do|done|case|esac|function|select|time|until|return|local|export|readonly|shift|break|continue',
+    css:'important|inherit|initial|unset|none|auto|block|inline|flex|grid|absolute|relative|fixed|sticky',
     html:'html|head|body|title|style|script|div|span|p|a|button|input|main|section|header|footer|ul|ol|li|table|tr|td|th|form|label|meta|link'
   };
   return common[lang]||'';
@@ -1357,6 +1357,9 @@ function highlightRawPre(pre,name){
       return m;
     });
   }
+  if(lang==='python') html=html.replace(/\b(def|class)(\s+)([A-Za-z_]\w*)/g,'<span class="syntax-keyword">$1</span>$2<span class="syntax-function">$3</span>');
+  if(lang==='javascript') html=html.replace(/\b(function)(\s+)([A-Za-z_$][\w$]*)/g,'<span class="syntax-keyword">$1</span>$2<span class="syntax-function">$3</span>');
+  if(lang==='java') html=html.replace(/\b(class|interface|enum|record)(\s+)([A-Za-z_$][\w$]*)/g,'<span class="syntax-keyword">$1</span>$2<span class="syntax-function">$3</span>');
   pre.innerHTML=html;
   pre.dataset.syntaxHighlighted='1';
 }
@@ -2196,10 +2199,11 @@ function installObservers(){
 // Allow the existing GitHub open path to persist a newly opened file
 // immediately, without changing its loading or pagination logic.
 window.readerEditorPersistSession=()=>schedulePersist('open',20);
+window.readerEditorPersistPage=()=>schedulePersist('page',20);
 
 async function init(){
   /*
-   * Wait until V9.3.8's existing initial pagination/page restoration has
+   * Wait until the existing initial pagination/page restoration has
    * completed. We do not alter that engine; we restore on top of it.
    */
   await new Promise(resolve=>setTimeout(resolve,420));
