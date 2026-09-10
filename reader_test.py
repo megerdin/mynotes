@@ -280,6 +280,8 @@ print(shopping_list)
 
 sorted_items = sorted(shopping_list)
 
+# edit page 5
+
 print()
 print("Sorted items:")
 
