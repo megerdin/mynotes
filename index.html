@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title><script>const APP_VERSION='9.4.8';</script><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title><script>const APP_VERSION='9.4.9';</script><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -34,6 +34,19 @@ body.nav-hidden #reader{height:100dvh !important}
 #pages.content .code-block,#pages.content .diagram{display:block;box-sizing:border-box;width:100%;max-width:100%;margin:.45em 0 .55em;padding:.65em .7em;border:1px solid var(--border);border-radius:8px;background:var(--code);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,"Liberation Mono","Noto Sans Mono",monospace;font-size:clamp(10px, 1.9vw, 13px);line-height:1.35;white-space:pre;overflow-x:auto;overflow-y:hidden;break-inside:avoid-column;column-break-inside:avoid;color:var(--text);tab-size:4}
 #pages.content .diagram{font-size:var(--diagram-size,12px);line-height:1.15;text-align:left;padding:.55em .35em}
 #pages.content .github-plain-text{white-space:pre-wrap!important;overflow-wrap:normal;word-break:normal;break-inside:auto;column-break-inside:auto}
+#pages .syntax-keyword{color:#7c3aed;font-weight:650}
+#pages .syntax-string{color:#b45309}
+#pages .syntax-comment{color:#6b7280;font-style:italic}
+#pages .syntax-number{color:#0f766e}
+#pages .syntax-function{color:#2563eb}
+#pages .syntax-tag{color:#c2410c}
+[data-theme="dark"] #pages .syntax-keyword{color:#c4b5fd}
+[data-theme="dark"] #pages .syntax-string{color:#fbbf24}
+[data-theme="dark"] #pages .syntax-comment{color:#9ca3af}
+[data-theme="dark"] #pages .syntax-number{color:#5eead4}
+[data-theme="dark"] #pages .syntax-function{color:#93c5fd}
+[data-theme="dark"] #pages .syntax-tag{color:#fdba74}
+
 @media(max-width:600px){#pages.content{font-size:var(--font);line-height:1.43}#pages.content p{margin-bottom:.32em}#pages.content h2{font-size:1.06em;margin:.42em 0 .24em}#pages.content h3{font-size:1em;margin:.38em 0 .22em}#pages.content .code-block{font-size:11px;padding:.55em .55em;line-height:1.32}#pages.content .diagram{font-size:var(--diagram-size,9px);line-height:1.08;padding:.45em .2em}}
 
 #pages.content .ccna-index{margin:0 0 1em 0;padding:.7em .75em;border:1px solid var(--border);border-radius:10px;background:var(--paper);break-inside:avoid-column;break-after:column;column-span:none}
@@ -511,6 +524,7 @@ function goHome(){
      */
     if(rawPre && (window.githubDocument || window.localDocument) &&
        (!(window.githubDocument || window.localDocument).isHtml || (window.githubDocument || window.localDocument).htmlMode==='raw')){
+      removeSyntaxHighlighting(rawPre);
       rawEditing=true;
       rawEditScrollLeft=q.r.scrollLeft;
       rawEditPage=q.page;
@@ -625,6 +639,7 @@ function goHome(){
     editBtn.title='Desktop editing mode';
     status.textContent='Edit mode';
     document.activeElement?.blur();
+    highlightCurrentRawFile();
     recalcAfterContentChange();
   }
 
@@ -1040,6 +1055,7 @@ function goHome(){
       window.githubDocument=null;
       window.localDocument={name:name,isHtml:html,htmlMode:html?mode:null,raw:raw};
       setHtmlModeBadge(html?mode:null);
+      if(mode==='raw'||!html)highlightCurrentRawFile();
       dirty=false;
       if(typeof invalidateMetrics==='function')invalidateMetrics();
       if(typeof fitDiagrams==='function')fitDiagrams();
@@ -1293,6 +1309,71 @@ function loadHtmlContent(html){
   return '';
 }
 
+function syntaxLanguage(name){
+  const n=(name||'').toLowerCase();
+  if(/\.py$/.test(n))return'python';
+  if(/\.(js|mjs|cjs)$/.test(n))return'javascript';
+  if(/\.java$/.test(n))return'java';
+  if(/\.json$/.test(n))return'json';
+  if(/\.(sh|bash)$/.test(n))return'bash';
+  if(/\.css$/.test(n))return'css';
+  if(/\.(html?|xhtml)$/.test(n))return'html';
+  return null;
+}
+function escapeSyntaxHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function syntaxPattern(lang){
+  const common={
+    python:'and|as|assert|async|await|break|case|class|continue|def|del|elif|else|except|False|finally|for|from|global|if|import|in|is|lambda|match|None|nonlocal|not|or|pass|raise|return|True|try|while|with|yield',
+    javascript:'as|async|await|break|case|catch|class|const|continue|debugger|default|delete|do|else|export|extends|false|finally|for|from|function|get|if|import|in|instanceof|let|new|null|of|return|set|static|super|switch|this|throw|true|try|typeof|var|void|while|with|yield',
+    java:'abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|do|double|else|enum|extends|final|finally|float|for|if|implements|import|instanceof|int|interface|long|native|new|null|package|private|protected|public|return|short|static|strictfp|super|switch|synchronized|this|throw|throws|transient|true|false|try|void|volatile|while',
+    json:'true|false|null',
+    bash:'if|then|else|elif|fi|for|while|in|do|done|case|esac|function|select|time|until',
+    css:'important',
+    html:'html|head|body|title|style|script|div|span|p|a|button|input|main|section|header|footer|ul|ol|li|table|tr|td|th|form|label|meta|link'
+  };
+  return common[lang]||'';
+}
+function highlightRawPre(pre,name){
+  if(!pre||pre.dataset.syntaxHighlighted==='1')return;
+  const lang=syntaxLanguage(name);
+  if(!lang)return;
+  const source=pre.textContent||'';
+  if(!source)return;
+  const escaped=escapeSyntaxHtml(source);
+  let html=escaped;
+  if(lang==='html'){
+    html=html.replace(/(&lt;\/?)([A-Za-z][\w:-]*)(?=[\s&gt;\/])/g,'$1<span class="syntax-tag">$2</span>');
+    html=html.replace(/(&lt;!--[\s\S]*?--&gt;)/g,'<span class="syntax-comment">$1</span>');
+  }else{
+    const comments=lang==='python'?'#[^\n]*':lang==='bash'?'#[^\n]*':'\/\/[^\n]*|\/\*[\s\S]*?\*\/';
+    const strings="(?:&quot;(?:\\\\.|[^&quot;\\\\])*&quot;|'(?:\\\\.|[^'\\\\])*')";
+    const pattern=new RegExp('('+comments+')|('+strings+')|\\b(\\d+(?:\\.\\d+)?)\\b|\\b('+syntaxPattern(lang)+')\\b|\\b([A-Za-z_$][\\w$]*)(?=\\s*\\()', 'g');
+    html=html.replace(pattern,(m,cmt,str,num,kw,fn)=>{
+      if(cmt)return'<span class="syntax-comment">'+m+'</span>';
+      if(str)return'<span class="syntax-string">'+m+'</span>';
+      if(num)return'<span class="syntax-number">'+m+'</span>';
+      if(kw)return'<span class="syntax-keyword">'+m+'</span>';
+      if(fn)return'<span class="syntax-function">'+m+'</span>';
+      return m;
+    });
+  }
+  pre.innerHTML=html;
+  pre.dataset.syntaxHighlighted='1';
+}
+function removeSyntaxHighlighting(pre){
+  if(!pre||pre.dataset.syntaxHighlighted!=='1')return;
+  const text=pre.textContent||'';
+  pre.textContent=text;
+  delete pre.dataset.syntaxHighlighted;
+}
+function highlightCurrentRawFile(){
+  if(document.body.classList.contains('editing'))return;
+  const pre=document.querySelector('#pages > pre.github-plain-text');
+  if(!pre)return;
+  const d=window.githubDocument||window.localDocument;
+  highlightRawPre(pre,d?.path||d?.name||'');
+}
+
 function loadPlainText(text){
   const pre=document.createElement('pre');
   pre.className='github-plain-text';
@@ -1438,6 +1519,7 @@ async function openGitHubFile(){
 
     window.githubDocument={owner:o,repo:r,branch:b,path:p,sha:data.sha||null,name:data.name||p.split('/').pop(),isHtml:html,htmlMode:html?mode:null,raw:raw};
     setHtmlModeBadge(html?mode:null);
+    if(mode==='raw'||!html)highlightCurrentRawFile();
     recalcAfterContentChange();
     status.textContent='Opened ✓ '+(data.path||p);
     const es=document.getElementById('editStatus');
