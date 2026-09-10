@@ -509,16 +509,16 @@ function goHome(){
       rawPre.contentEditable='true';
       rawPre.spellcheck=false;
       rawPre.focus({preventScroll:true});
+      reader().scrollLeft=rawEditScrollLeft;
 
-      // The toolbar overlays the top of #reader.  Do not ask the browser
-      // for a caret underneath the toolbar: that can resolve outside rawPre
-      // and leave focus/caret at the beginning of the document.
+      // Raw HTML is one continuous <pre> spread across CSS columns.
+      // Focus normally places the caret at the start of the document, so
+      // explicitly place the caret in the visible page instead.
       requestAnimationFrame(()=>{
         if(!editing || !rawEditing || currentHost!==rawPre)return;
-        const rr=reader().getBoundingClientRect();
-        const cs=getComputedStyle(p);
-        const x=rr.left+(parseFloat(cs.paddingLeft)||0)+6;
-        const y=rr.top+Math.max(72,parseFloat(cs.paddingTop)||0)+6;
+        const rr=p.getBoundingClientRect();
+        const x=rr.left+q.index*q.pitch+q.width/2;
+        const y=rr.top+(parseFloat(q.cs.paddingTop)||0)+6;
         let range=null;
         if(document.caretRangeFromPoint)range=document.caretRangeFromPoint(x,y);
         else if(document.caretPositionFromPoint){
@@ -1158,6 +1158,7 @@ const upBtn=document.getElementById('ghUpBtn');
 const browserPath=document.getElementById('githubBrowserPath');
 const fileList=document.getElementById('githubFileList');
 const status=document.getElementById('ghStatus');
+let openingFile=false;
 const owner=document.getElementById('ghOwner');
 const repo=document.getElementById('ghRepo');
 const branch=document.getElementById('ghBranch');
@@ -1303,9 +1304,11 @@ async function browseGitHubFiles(currentPath=''){
 }
 
 async function openGitHubFile(){
+  if(openingFile)return;
   const o=owner.value.trim(),r=repo.value.trim(),b=branch.value.trim()||'main',p=path.value.trim();
   if(!o||!r){status.textContent='Enter repository owner and repository name';return}
   if(!p){status.textContent='Enter the GitHub file path';return}
+  openingFile=true;
   saveConfig();
   status.textContent='Opening GitHub file…';
   openFileBtn.disabled=true;
@@ -1339,7 +1342,10 @@ async function openGitHubFile(){
     panel.classList.remove('open');
   }catch(e){
     status.textContent='Open failed: '+e.message;
-  }finally{openFileBtn.disabled=false}
+  }finally{
+    openFileBtn.disabled=false;
+    openingFile=false;
+  }
 }
 openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');status.textContent='Not connected';fileList.replaceChildren();const d=document.createElement('div');d.className='gh-status';d.style.padding='7px 9px';d.textContent='Click Browse Files';fileList.appendChild(d);setBrowserPath('');owner.focus()});
 closeBtn.addEventListener('click',()=>panel.classList.remove('open'));
