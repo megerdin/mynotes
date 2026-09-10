@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V8.0.2</title><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V9.0.0</title><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -163,9 +163,9 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 
 </head>
 <body>
-<!-- ReaderEditor GitHub V8.0.2: Open, Save, Save As, and New repository files; HTML and plain-text support. -->
+<!-- ReaderEditor GitHub V9.0.0: Open, Save, Save As, and New repository files; HTML and plain-text support. -->
 <div id="toolbar"><button id="homeBtn" onclick="goHome()" title="Home / Index">⌂</button>
-<button id="githubBtn" title="GitHub">GitHub</button><button id="newBtn" title="New document">New</button><span id="versionFlag">ReaderEditor GitHub V8.0.2</span>
+<button id="githubBtn" title="GitHub">GitHub</button><button id="newBtn" title="New document">New</button><span id="versionFlag">ReaderEditor GitHub V9.0.0</span>
 <button onclick="prev()" title="Previous page">←</button><button onclick="next()" title="Next page">→</button>
 <input id="jump" min="1" title="Enter page number" type="number" value="1"/>
 <span id="pageInfo">Page …</span>
@@ -192,7 +192,7 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 <label>Branch</label><input id="ghBranch" value="main"/>
 <label>File path</label><input id="ghPath" placeholder="testfile"/>
 <label>GitHub token (optional for public files)</label><input id="ghToken" type="password" placeholder="fine-grained token" autocomplete="off"/>
-<div class="gh-row"><button id="ghTestBtn">Test Connection</button><button id="ghOpenBtn">Open GitHub File</button><button id="ghBrowseBtn">Browse Files</button><button id="ghCloseBtn">Close</button></div>
+<div class="gh-row"><button id="ghTestBtn">Test Connection</button><button id="ghOpenBtn">Open GitHub File</button><button id="ghBrowseBtn">Browse Files</button><button id="ghPreviewBtn">Pages Preview</button><button id="ghCloseBtn">Close</button></div>
 <div id="githubBrowser">
   <div id="githubBrowserHead">
     <span id="githubBrowserPath">Repository root</span>
@@ -770,45 +770,7 @@ function goHome(){
     }
   }
 
-  
-async function checkGitHubConflict(){
-  const d=window.githubDocument;
-  if(!d || !d.owner || !d.repo || !d.path || !d.sha)return false;
-  const ghOwner=document.getElementById('ghOwner');
-  const ghRepo=document.getElementById('ghRepo');
-  const ghToken=document.getElementById('ghToken');
-  if(!ghOwner || !ghRepo)return false;
-  const api='https://api.github.com/repos/'+encodeURIComponent(d.owner||ghOwner.value.trim())+'/'+encodeURIComponent(d.repo||ghRepo.value.trim());
-  const h={'Accept':'application/vnd.github+json','X-GitHub-Api-Version':'2022-11-28'};
-  if(ghToken && ghToken.value.trim())h.Authorization='Bearer '+ghToken.value.trim();
-  const url=api+'/contents/'+d.path.split('/').map(encodeURIComponent).join('/')+'?ref='+encodeURIComponent(d.branch||'main');
-  const res=await fetch(url,{headers:h});
-  const data=await res.json().catch(()=>({}));
-  if(!res.ok)throw new Error(data.message||('HTTP '+res.status));
-  if(data.sha!==d.sha){
-    const changedByOthers='The GitHub file changed since you opened it.';
-    status.textContent='Conflict detected ⚠';
-    if(!confirm(changedByOthers+'\n\nYour local changes will NOT be overwritten.\n\nOK = reload the latest GitHub version\nCancel = keep your local changes')){
-      return true;
-    }
-    if(typeof openGitHubFile==='function'){
-      await openGitHubFile();
-    }
-    return true;
-  }
-  return false;
-}
-
-async function saveCurrent(){
-  if(window.githubDocument && window.githubDocument.owner && window.githubDocument.path && window.githubDocument.sha){
-    try{
-      const conflict=await checkGitHubConflict();
-      if(conflict)return;
-    }catch(e){
-      status.textContent='Conflict check failed: '+e.message;
-      return;
-    }
-  }
+  async function saveCurrent(){
     if(window.githubDocument && typeof window.githubSaveCurrent==='function'){
       return await window.githubSaveCurrent();
     }
@@ -1075,6 +1037,7 @@ const closeBtn=document.getElementById('ghCloseBtn');
 const testBtn=document.getElementById('ghTestBtn');
 const openFileBtn=document.getElementById('ghOpenBtn');
 const browseBtn=document.getElementById('ghBrowseBtn');
+const previewBtn=document.getElementById('ghPreviewBtn');
 const upBtn=document.getElementById('ghUpBtn');
 const browserPath=document.getElementById('githubBrowserPath');
 const fileList=document.getElementById('githubFileList');
@@ -1174,12 +1137,38 @@ async function browseGitHubFiles(currentPath=''){
   }
 }
 
+function githubPagesUrl(d){
+  const o=(d?.owner||owner.value||'').trim();
+  const r=(d?.repo||repo.value||'').trim();
+  const p=(d?.path||path.value||'').trim();
+  if(!o||!r||!p)return '';
+  const base=r.toLowerCase()===o.toLowerCase()+'.github.io'
+    ? 'https://'+o+'.github.io/'
+    : 'https://'+o+'.github.io/'+r+'/';
+  return base+p.split('/').filter(Boolean).map(encodeURIComponent).join('/');
+}
+function previewGitHubPages(){
+  const d=window.githubDocument;
+  if(!d||!d.owner||!d.repo||!d.path){
+    status.textContent='Open a GitHub file first';
+    return;
+  }
+  const url=githubPagesUrl(d);
+  if(!url){
+    status.textContent='GitHub Pages preview URL unavailable';
+    return;
+  }
+  window.open(url,'_blank','noopener');
+  status.textContent='Pages preview opened ↗';
+}
+
 async function openGitHubFile(){const o=owner.value.trim(),r=repo.value.trim(),b=branch.value.trim()||'main',p=path.value.trim();if(!o||!r){status.textContent='Enter repository owner and repository name';return}if(!p){status.textContent='Enter the GitHub file path';return}saveConfig();status.textContent='Opening GitHub file…';openFileBtn.disabled=true;try{const url=apiBase()+'/contents/'+p.split('/').map(encodeURIComponent).join('/')+'?ref='+encodeURIComponent(b);const res=await fetch(url,{headers:headers()}),data=await readJson(res);if(!res.ok)throw new Error(data.message||('HTTP '+res.status));if(Array.isArray(data))throw new Error('Selected path is a directory; choose a file');if(!data.content)throw new Error('GitHub returned no file content');const raw=decodeBase64Utf8(data.content);const pages=document.getElementById('pages');pages.replaceChildren();if(isHtmlFile(p)){pages.innerHTML=loadHtmlContent(raw)}else{pages.appendChild(loadPlainText(raw))}window.githubDocument={owner:o,repo:r,branch:b,path:p,sha:data.sha||null,name:data.name||p.split('/').pop(),isHtml:isHtmlFile(p),raw:raw};if(typeof invalidateMetrics==='function')invalidateMetrics();if(typeof fitDiagrams==='function')fitDiagrams();if(typeof update==='function')update(true);if(typeof goHome==='function' && !window.location.hash){/* no-op: preserve V70 navigation */}status.textContent='Opened ✓ '+(data.path||p);const es=document.getElementById('editStatus');if(es)es.textContent='GitHub file loaded • '+(data.path||p);panel.classList.remove('open')}catch(e){status.textContent='Open failed: '+e.message}finally{openFileBtn.disabled=false}}
 openBtn.addEventListener('click',()=>{loadConfig();panel.classList.add('open');status.textContent='Not connected';fileList.replaceChildren();const d=document.createElement('div');d.className='gh-status';d.style.padding='7px 9px';d.textContent='Click Browse Files';fileList.appendChild(d);setBrowserPath('');owner.focus()});
 closeBtn.addEventListener('click',()=>panel.classList.remove('open'));
 testBtn.addEventListener('click',testConnection);
 openFileBtn.addEventListener('click',openGitHubFile);
 browseBtn.addEventListener('click',()=>browseGitHubFiles(''));
+previewBtn.addEventListener('click',previewGitHubPages);
 upBtn.addEventListener('click',()=>browseGitHubFiles(parentPath(browserPath.textContent==='Repository root'?'':browserPath.textContent)));
 [owner,repo,branch,path].forEach(x=>x.addEventListener('change',saveConfig));
 })();
