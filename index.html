@@ -165,9 +165,9 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 
 </head>
 <body>
-<!-- ReaderEditor GitHub V9.4.1: Session Persistence & GitHub connection recovery. Open, Save, Save As, and New repository files; HTML and plain-text support. -->
+<!-- ReaderEditor GitHub V9.4.2: Session Persistence & GitHub connection recovery. Open, Save, Save As, and New repository files; HTML and plain-text support. -->
 <div id="toolbar"><button id="homeBtn" onclick="goHome()" title="Home / Index">⌂</button>
-<button id="githubBtn" title="GitHub">GitHub</button><button id="newBtn" title="New document">New</button><span id="versionFlag">ReaderEditor GitHub V9.4.1</span><span id="htmlModeBadge"></span>
+<button id="githubBtn" title="GitHub">GitHub</button><button id="newBtn" title="New document">New</button><button id="localOpenBtn" title="Open a local file">Open</button><span id="versionFlag">ReaderEditor GitHub V9.4.2</span><span id="htmlModeBadge"></span>
 <button onclick="prev()" title="Previous page">←</button><button onclick="next()" title="Next page">→</button>
 <input id="jump" min="1" title="Enter page number" type="number" value="1"/>
 <span id="pageInfo">Page …</span>
@@ -184,7 +184,6 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 <button class="edit-tool" id="cliBtn">CLI</button>
 <button class="edit-tool" id="saveBtn">Save</button>
 <button class="edit-tool" id="saveAsBtn">Save As</button>
-<button class="edit-tool" id="openBtn">Open</button>
 <span class="edit-status" id="editStatus">Edit mode</span>
 </div>
 <div id="githubPanel" aria-label="GitHub connection">
@@ -448,7 +447,7 @@ function goHome(){
   const saveBtn=document.getElementById('saveBtn');
   const saveAsBtn=document.getElementById('saveAsBtn');
   const newBtn=document.getElementById('newBtn');
-  const openBtn=document.getElementById('openBtn');
+  const openBtn=document.getElementById('localOpenBtn');
   const status=document.getElementById('editStatus');
 
   let editing=false,fileHandle=null,dirty=false,savedRange=null;
@@ -501,8 +500,8 @@ function goHome(){
      * into the page-local V62 host causes CSS multicolumn reflow after every
      * keystroke.  Keep it in #pages and edit it in place instead.
      */
-    if(rawPre && window.githubDocument &&
-       (!window.githubDocument.isHtml || window.githubDocument.htmlMode==='raw')){
+    if(rawPre && (window.githubDocument || window.localDocument) &&
+       (!(window.githubDocument || window.localDocument).isHtml || (window.githubDocument || window.localDocument).htmlMode==='raw')){
       rawEditing=true;
       rawEditScrollLeft=q.r.scrollLeft;
       rawEditPage=q.page;
@@ -860,6 +859,13 @@ function goHome(){
   }
 
   async function saveCurrent(){
+    if(window.localDocument){
+      if(!fileHandle){
+        status.textContent='Select this local file with Open first';
+        if(!await ensureHandle())return false;
+      }
+      return await saveToHandle();
+    }
     if(window.githubDocument && typeof window.githubSaveCurrent==='function'){
       return await window.githubSaveCurrent();
     }
@@ -947,13 +953,99 @@ function goHome(){
   saveAsBtn.onclick=saveAs;
   newBtn.onclick=newDocument;
 
-  openBtn.onclick=async()=>{
-    if(location.protocol==='http:'&&(location.hostname==='127.0.0.1'||location.hostname==='localhost')){
-      status.textContent='Already editing the current file • Save writes directly to it';
-      return;
+  async function openLocalFile(){
+    if(dirty && !confirm('Discard unsaved changes and open another local file?'))return;
+
+    let handle=null,file=null;
+    if(window.showOpenFilePicker){
+      try{
+        const [h]=await window.showOpenFilePicker({multiple:false});
+        if(!h)return;
+        handle=h;
+        file=await h.getFile();
+      }catch(e){
+        if(e && e.name==='AbortError')return;
+        status.textContent='Open failed: '+(e.message||e);
+        return;
+      }
+    }else{
+      const input=document.createElement('input');
+      input.type='file';
+      input.style.display='none';
+      document.body.appendChild(input);
+      const picked=await new Promise(resolve=>{
+        input.onchange=()=>resolve(input.files&&input.files[0]?input.files[0]:null);
+        input.oncancel=()=>resolve(null);
+        input.click();
+      });
+      input.remove();
+      if(!picked)return;
+      file=picked;
     }
-    await ensureHandle();
-  };
+
+    try{
+      const raw=await file.text();
+      const name=file.name||'local-file';
+      const html=/\.(html?|xhtml)$/i.test(name);
+      const mode=html?(confirm('HTML file detected.\n\nOK = Reader / HTML mode\nCancel = Raw / source mode')?'reader':'raw'):'raw';
+
+      if(document.body.classList.contains('editing'))exitEditing();
+      document.getElementById('pages').replaceChildren();
+
+      if(html && mode==='reader'){
+        const doc=new DOMParser().parseFromString(raw,'text/html');
+        const source=doc.querySelector('#pages');
+        if(source){
+          document.getElementById('pages').innerHTML=source.innerHTML;
+        }else{
+          doc.querySelectorAll('script').forEach(e=>e.remove());
+          document.getElementById('pages').innerHTML=doc.body?doc.body.innerHTML:'';
+        }
+      }else{
+        const pre=document.createElement('pre');
+        pre.className='github-plain-text';
+        pre.textContent=raw;
+        pre.style.display='block';
+        pre.style.boxSizing='border-box';
+        pre.style.width='100%';
+        pre.style.maxWidth='100%';
+        pre.style.margin='.45em 0 .55em';
+        pre.style.padding='.55em .55em';
+        pre.style.border='1px solid var(--border)';
+        pre.style.borderRadius='8px';
+        pre.style.background='var(--code)';
+        pre.style.fontFamily='ui-monospace,SFMono-Regular,Menlo,Monaco,"Liberation Mono","Noto Sans Mono",monospace';
+        pre.style.fontSize='11px';
+        pre.style.lineHeight='1.32';
+        pre.style.whiteSpace='pre-wrap';
+        pre.style.overflowX='visible';
+        pre.style.overflowY='visible';
+        pre.style.breakInside='auto';
+        pre.style.columnBreakInside='auto';
+        pre.style.color='var(--text)';
+        pre.style.tabSize='4';
+        document.getElementById('pages').appendChild(pre);
+      }
+
+      fileHandle=handle;
+      window.githubDocument=null;
+      window.localDocument={name:name,isHtml:html,htmlMode:html?mode:null,raw:raw};
+      setHtmlModeBadge(html?mode:null);
+      dirty=false;
+      if(typeof invalidateMetrics==='function')invalidateMetrics();
+      if(typeof fitDiagrams==='function')fitDiagrams();
+      if(typeof recalcAfterContentChange==='function')recalcAfterContentChange();
+      status.textContent='Opened local file ✓ '+name;
+      const es=document.getElementById('editStatus');
+      if(es)es.textContent=html?(mode==='reader'?'Local HTML Reader loaded • '+name:'Local raw HTML loaded • '+name):'Local raw text loaded • '+name;
+      if(typeof showNavigation==='function')showNavigation();
+    }catch(e){
+      status.textContent='Open failed: '+(e.message||e);
+    }
+  }
+
+  openBtn.onclick=openLocalFile;
+  window.readerEditorOpenLocalFile=openLocalFile;
 
   window.addEventListener('beforeunload',e=>{
     if(dirty){e.preventDefault();e.returnValue='';}
@@ -1606,7 +1698,7 @@ loadConfig();
     }
   }
 
-  // V9.4.1 session persistence hook: expose the existing serializer only.
+  // V9.4.2 session persistence hook: expose the existing serializer only.
   // Save/Save As behavior itself is unchanged.
   window.githubGetCurrentContent=contentToSave;
   window.githubSaveCurrent=saveGitHub;
