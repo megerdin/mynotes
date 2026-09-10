@@ -313,7 +313,7 @@ function update(force=false){
   if(location.hash!==hash) history.replaceState(null,'',location.pathname+location.search+hash);
   // Persist the logical page whenever the page tracker confirms it. This
   // keeps local and GitHub documents on the same page-persistence path.
-  if(typeof window.readerEditorSchedulePersist==='function') window.readerEditorSchedulePersist('page',20);
+  if(typeof schedulePersist==='function') schedulePersist('page',20);
 }
 function go(n){
   n=Math.max(1,Math.min(pageCount(),Number(n)||1));
@@ -2089,6 +2089,9 @@ async function restoreSession(){
       pre.style.color='var(--text)';
       pre.style.tabSize='4';
       pagesEl.appendChild(pre);
+      if((d.htmlMode==='raw'||!d.isHtml) && typeof highlightRawPre==='function'){
+        highlightRawPre(pre,d.path||d.name||'');
+      }
     }
 
     if(d.source==='local'){
@@ -2139,23 +2142,11 @@ async function restoreSession(){
       Number(record.page)||1
     ));
 
-    if(typeof pageStart==='function' && typeof reader!=='undefined'){
-      // The restored session is authoritative. Set the exact scroll position
-      // immediately so a stale URL hash cannot win after reload.
-      reader.scrollLeft=pageStart(target);
-      if(typeof update==='function')update(true);
-    }else if(typeof go==='function'){
+    if(typeof go==='function'){
       go(target);
     }else if(typeof reader!=='undefined'){
       reader.scrollLeft=Math.max(0,(target-1)*(reader.clientWidth||1));
     }
-
-    // Keep the URL aligned with the restored document/page, replacing any
-    // hash that belonged to the previously opened document.
-    try{
-      const hash='#page='+target;
-      if(location.hash!==hash)history.replaceState(null,'',location.pathname+location.search+hash);
-    }catch(e){}
 
     const status=document.getElementById('editStatus');
     if(status){
@@ -2204,7 +2195,6 @@ function installObservers(){
 
 // Allow the existing GitHub open path to persist a newly opened file
 // immediately, without changing its loading or pagination logic.
-window.readerEditorSchedulePersist=(reason,delay=180)=>schedulePersist(reason,delay);
 window.readerEditorPersistSession=()=>schedulePersist('open',20);
 
 async function init(){
