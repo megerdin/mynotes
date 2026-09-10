@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V9.3.2</title><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V9.3.3</title><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -165,9 +165,9 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 
 </head>
 <body>
-<!-- ReaderEditor GitHub V9.3.2: Open, Save, Save As, and New repository files; HTML and plain-text support. -->
+<!-- ReaderEditor GitHub V9.3.3: Open, Save, Save As, and New repository files; HTML and plain-text support. -->
 <div id="toolbar"><button id="homeBtn" onclick="goHome()" title="Home / Index">⌂</button>
-<button id="githubBtn" title="GitHub">GitHub</button><button id="newBtn" title="New document">New</button><span id="versionFlag">ReaderEditor GitHub V9.3.2</span><span id="htmlModeBadge"></span>
+<button id="githubBtn" title="GitHub">GitHub</button><button id="newBtn" title="New document">New</button><span id="versionFlag">ReaderEditor GitHub V9.3.3</span><span id="htmlModeBadge"></span>
 <button onclick="prev()" title="Previous page">←</button><button onclick="next()" title="Next page">→</button>
 <input id="jump" min="1" title="Enter page number" type="number" value="1"/>
 <span id="pageInfo">Page …</span>
@@ -453,6 +453,7 @@ function goHome(){
 
   let editing=false,fileHandle=null,dirty=false,savedRange=null;
   let currentHost=null,currentNodes=[];
+  let rawEditing=false,rawEditScrollLeft=0,rawEditPage=1;
 
   function pages(){return document.getElementById('pages');}
   function reader(){return document.getElementById('reader');}
@@ -492,6 +493,28 @@ function goHome(){
   function makeHost(){
     if(currentHost)return;
     const q=pageInfo();
+    const p=q.p;
+    const rawPre=p.querySelector(':scope > pre.github-plain-text');
+
+    /*
+     * Raw/TXT documents are one continuous <pre>.  Moving that single node
+     * into the page-local V62 host causes CSS multicolumn reflow after every
+     * keystroke.  Keep it in #pages and edit it in place instead.
+     */
+    if(rawPre && window.githubDocument &&
+       (!window.githubDocument.isHtml || window.githubDocument.htmlMode==='raw')){
+      rawEditing=true;
+      rawEditScrollLeft=q.r.scrollLeft;
+      rawEditPage=q.page;
+      rawPre.contentEditable='true';
+      rawPre.spellcheck=false;
+      rawPre.focus({preventScroll:true});
+      currentHost=rawPre;
+      currentNodes=[rawPre];
+      return;
+    }
+
+    rawEditing=false;
     currentNodes=pageNodes();
     if(!currentNodes.length)return;
 
@@ -500,10 +523,6 @@ function goHome(){
     currentHost.contentEditable='true';
     currentHost.spellcheck=false;
 
-    /*
-     * The host is transparent to layout: it inherits the exact typography
-     * used by the reader, but is only created for the current page.
-     */
     currentHost.style.cssText=
       'position:relative;'+
       'box-sizing:border-box;'+
@@ -519,22 +538,23 @@ function goHome(){
       'color:'+q.cs.color+';'+
       'background:transparent;';
 
-    /*
-     * Move the actual current-page nodes into the host rather than cloning
-     * them. This preserves their identity and lets the browser make one
-     * continuous selection across paragraphs.
-     */
     const parent=currentNodes[0].parentNode;
     const before=currentNodes[currentNodes.length-1].nextSibling;
     parent.insertBefore(currentHost,before);
     currentNodes.forEach(n=>currentHost.appendChild(n));
-
-    // Keep the reader's normal column container from reflowing the editor.
     currentHost.style.columnSpan='none';
   }
 
   function removeHost(){
     if(!currentHost)return;
+    if(rawEditing){
+      currentHost.removeAttribute('contenteditable');
+      currentHost.removeAttribute('spellcheck');
+      currentHost=null;
+      currentNodes=[];
+      rawEditing=false;
+      return;
+    }
     const parent=currentHost.parentNode;
     const before=currentHost.nextSibling;
     while(currentHost.firstChild)parent.insertBefore(currentHost.firstChild,before);
@@ -566,30 +586,13 @@ function goHome(){
 
   function setEditing(on){
     if(on){
-      // Preserve the reader position before moving the current-page nodes into
-      // the V62 editing host. Creating/focusing the host can otherwise cause
-      // the browser to scroll back to the start of the document.
-      const savedScrollLeft=reader().scrollLeft;
-      const savedPage=(typeof currentPage==='function')?currentPage():1;
-
       editing=true;
       document.body.classList.add('editing');
       makeHost();
 
       if(currentHost){
         currentHost.focus({preventScroll:true});
-
-        // Restore the exact horizontal position after the DOM move and once
-        // more on the next frame after Chromium has completed reflow.
-        reader().scrollLeft=savedScrollLeft;
-        requestAnimationFrame(()=>{
-          reader().scrollLeft=savedScrollLeft;
-          if(Math.abs(reader().scrollLeft-savedScrollLeft)>1 && typeof pageStart==='function'){
-            reader().scrollLeft=pageStart(savedPage);
-          }
-          if(typeof update==='function')update(true);
-        });
-
+        if(rawEditing)reader().scrollLeft=rawEditScrollLeft;
         editBtn.textContent='✓';
         editBtn.title='Exit editing mode';
         status.textContent=fileHandle?'Editing • file selected':'Editing • choose Open to enable same-file Save';
@@ -616,6 +619,38 @@ function goHome(){
     document.activeElement?.blur();
     recalcAfterContentChange();
   }
+
+  document.addEventListener('input',()=>{
+    if(!editing || !rawEditing)return;
+    const r=reader();
+    const keep=rawEditScrollLeft;
+    requestAnimationFrame(()=>{
+      r.scrollLeft=keep;
+      rawEditScrollLeft=keep;
+      if(typeof update==='function')update(true);
+      markDirty();
+    });
+  });
+
+  document.addEventListener('keydown',e=>{
+    if(!editing || !rawEditing || !currentHost || e.key!=='Enter')return;
+    const pre=currentHost;
+    const sel=window.getSelection();
+    if(!sel||!sel.rangeCount||!pre.contains(sel.anchorNode))return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    const range=sel.getRangeAt(0);
+    range.deleteContents();
+    const node=document.createTextNode('\n');
+    range.insertNode(node);
+    range.setStartAfter(node);
+    range.collapse(true);
+    sel.removeAllRanges();
+    sel.addRange(range);
+    markDirty();
+    const keep=rawEditScrollLeft;
+    requestAnimationFrame(()=>{reader().scrollLeft=keep;rawEditScrollLeft=keep;update(true);});
+  },true);
 
   editBtn.onclick=()=>setEditing(!editing);
 
