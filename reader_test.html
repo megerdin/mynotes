@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>10 Page Reader Test</title>
+
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      background: #eee;
+      color: #222;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      box-sizing: border-box;
+      padding: 25mm;
+      margin: 10mm auto;
+      background: white;
+      page-break-after: always;
+      break-after: page;
+    }
+
+    h1 {
+      font-size: 32px;
+      margin-bottom: 20px;
+    }
+
+    h2 {
+      font-size: 24px;
+      margin-top: 30px;
+    }
+
+    p {
+      font-size: 17px;
+      margin: 12px 0;
+    }
+
+    .page-number {
+      margin-top: 40px;
+      text-align: center;
+      color: #777;
+    }
+
+    ul {
+      font-size: 17px;
+      line-height: 1.8;
+    }
+
+    blockquote {
+      border-left: 4px solid #888;
+      padding-left: 15px;
+      color: #555;
+      font-style: italic;
+    }
+
+    @media print {
+      body {
+        background: white;
+      }
+
+      .page {
+        margin: 0;
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- PAGE 1 -->
+  <section class="page">
+    <h1>Page One</h1>
+
+    <h2>Welcome</h2>
+
+    <p>
+      This is a simple HTML document designed to test reader applications.
+      It contains exactly ten sections, with each section intended to appear
+      as a separate page.
+    </p>
+
+    <p>
+      The text is deliberately ordinary and easy to recognize. A reader app
+      can use this document to test page navigation, scrolling, font rendering,
+      margins, line spacing, and page-break handling.
+    </p>
+
+    <p>
+      Every page contains a page number and a different heading. This makes it
+      easy to determine which part of the document is currently visible.
+    </p>
+
+    <blockquote>
+      A simple document is often the best document for testing.
+    </blockquote>
+
+    <p class="page-number">Page 1 of 10</p>
+  </section>
+
+
+  <!-- PAGE 2 -->
+  <section class="page">
+    <h1>Page Two</h1>
+
+    <h2>Reading Text</h2>
+
+    <p>
+      Reader applications display text in many different ways. Some applications
+      use continuous scrolling, while others divide content into individual pages.
+    </p>
+
+    <p>
+      This paragraph provides enough text to test normal word wrapping. The width
+      of the page should cause sentences to wrap naturally without requiring any
+      special formatting.
+    </p>
+
+    <p>
+      You can also change the font size in your reader application. Increasing
+      the font size should make the text larger while preserving the meaning and
+      order of the content.
+    </p>
+
+    <ul>
+      <li>Normal text rendering</li>
+      <li>Paragraph spacing</li>
+      <li>Font size changes</li>
+      <li>Page navigation</li>
+    </ul>
+
+    <p class="page-number">Page 2 of 10</p>
+  </section>
+
+
+  <!-- PAGE 3 -->
+  <section class="page">
+    <h1>Page Three</h1>
+
+    <h2>A Short Story</h2>
+
+    <p>
+      On a quiet morning, a small town began its day beneath a pale blue sky.
+      The streets were almost empty, and the shops were just beginning to open.
+    </p>
+
+    <p>
+      A baker placed fresh bread near the front window. Across the street,
+      someone unlocked an old bookstore and switched on its lights.
+    </p>
+
+    <p>
+      Nothing unusual happened that morning. That was precisely what made it
+      pleasant. People walked slowly, greeted their neighbors, and continued
+      with the ordinary routines of their lives.
+    </p>
+
+    <p>
+      By noon, the town was busy again. Cars moved through the main road,
+      children returned from school, and the smell of fresh bread still filled
+      the air.
+    </p>
+
+    <p class="page-number">Page 3 of 10</p>
+  </section>
+
+
+  <!-- PAGE 4 -->
+  <section class="page">
+    <h1>Page Four</h1>
+
+    <h2>Numbers and Symbols</h2>
+
+    <p>
+      This page contains numbers and common symbols for testing character
+      rendering in reader applications.
+    </p>
+
+    <p>
+      Numbers: 0 1 2 3 4 5 6 7 8 9
+    </p>
+
+    <p>
+      Large numbers: 1,000 &nbsp; 10,000 &nbsp; 100,000 &nbsp; 1,000,000
+    </p>
+
+    <p>
+      Mathematics: 2 + 2 = 4, 10 × 5 = 50, 100 ÷ 4 = 25.
+    </p>
+
+    <p>
+      Symbols: © ® ™ € £ $ ¥ % &amp; @ # + − = / \ * ( ) [ ] { }
+    </p>
+
+    <p>
+      The quick brown fox jumps over the lazy dog.
+    </p>
+
+    <p>
+      THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG.
+    </p>
+
+    <p class="page-number">Page 4 of 10</p>
+  </section>
+
+
+  <!-- PAGE 5 -->
+  <section class="page">
+    <h1>Page Five</h1>
+
+    <h2>A List of Things</h2>
+
+    <p>
+      Lists are useful for checking how a reader handles structured content.
+    </p>
+
+    <ul>
+      <li>First item in the list.</li>
+      <li>Second item in the list.</li>
+      <li>Third item in the list.</li>
+      <li>Fourth item in the list.</li>
+      <li>Fifth item in the list.</li>
+      <li>Sixth item in the list.</li>
+      <li>Seventh item in the list.</li>
+    </ul>
+
+    <h2>Another Paragraph</h2>
+
+    <p>
+      The purpose of this page is not to communicate complicated information.
+      Instead, it gives the reader application a mixture of headings, paragraphs,
+      and list elements to display.
+    </p>
+
+    <p>
+      Try changing the orientation of your device, if supported. The layout
+      should adapt to different screen sizes.
+    </p>
+
+    <p class="page-number">Page 5 of 10</p>
+  </section>
+
+
+  <!-- PAGE 6 -->
+  <section class="page">
+    <h1>Page Six</h1>
+
+    <h2>Longer Paragraphs</h2>
+
+    <p>
+      This is a longer paragraph intended to test how a reader application
+      handles continuous text. A paragraph such as this one contains several
+      sentences and should wrap over multiple lines. When the available width
+      becomes smaller, the lines should become shorter. When the font becomes
+      larger, the paragraph should require more vertical space.
+    </p>
+
+    <p>
+      Good reader software should preserve the order of the text and should
+      avoid accidentally removing words or changing punctuation. It should also
+      maintain a comfortable amount of spacing between paragraphs and headings.
+    </p>
+
+    <p>
+      You can use this page to test scrolling, text selection, copying, zooming,
+      and accessibility features. If your application supports text-to-speech,
+      the sentences should also be read in their natural order.
+    </p>
+
+    <p class="page-number">Page 6 of 10</p>
+  </section>
+
+
+  <!-- PAGE 7 -->
+  <section class="page">
+    <h1>Page Seven</h1>
+
+    <h2>Quotation Test</h2>
+
+    <blockquote>
+      Reading is a way of travelling without moving.
+    </blockquote>
+
+    <p>
+      Quotations are visually different from ordinary paragraphs in this test.
+      The blockquote has a border on the left side and uses italic text.
+    </p>
+
+    <h2>Second Quote</h2>
+
+    <blockquote>
+      Simple tests make complicated problems easier to understand.
+    </blockquote>
+
+    <p>
+      The rest of the page returns to normal text. This contrast can help test
+      whether styles are correctly applied and removed when appropriate.
+    </p>
+
+    <p class="page-number">Page 7 of 10</p>
+  </section>
+
+
+  <!-- PAGE 8 -->
+  <section class="page">
+    <h1>Page Eight</h1>
+
+    <h2>Accessibility Test</h2>
+
+    <p>
+      This document uses semantic HTML elements such as headings, paragraphs,
+      lists, and sections. These elements can make the document easier for
+      assistive technologies to understand.
+    </p>
+
+    <p>
+      The main language of this document is English. The document also has a
+      descriptive title, which may be displayed by some reader applications.
+    </p>
+
+    <p>
+      Reader applications may provide options for increasing text size,
+      changing contrast, selecting different fonts, or enabling screen readers.
+      These features can be tested using this page.
+    </p>
+
+    <p>
+      A good reading experience should remain understandable even when the
+      visual presentation changes.
+    </p>
+
+    <p class="page-number">Page 8 of 10</p>
+  </section>
+
+
+  <!-- PAGE 9 -->
+  <section class="page">
+    <h1>Page Nine</h1>
+
+    <h2>Final Test Paragraphs</h2>
+
+    <p>
+      This is page nine. There is only one more page after this one. The repeated
+      page structure makes it easy to test forward and backward navigation.
+    </p>
+
+    <p>
+      If your reader provides a table of contents, bookmarks, search, or
+      progress indicator, those features can also be tested with this document.
+    </p>
+
+    <p>
+      Search for words such as "reader", "page", "test", or "application".
+      Each of these words appears in several places throughout the document.
+    </p>
+
+    <p>
+      You can also select this paragraph and copy it to another application.
+      The copied text should remain readable and should not contain unexpected
+      characters.
+    </p>
+
+    <p class="page-number">Page 9 of 10</p>
+  </section>
+
+
+  <!-- PAGE 10 -->
+  <section class="page">
+    <h1>Page Ten</h1>
+
+    <h2>The End</h2>
+
+    <p>
+      You have reached the final page of the ten-page reader test document.
+    </p>
+
+    <p>
+      If every page appeared correctly, the reader successfully handled the
+      basic HTML structure and explicit page breaks.
+    </p>
+
+    <p>
+      You can now test additional features such as changing fonts, adjusting
+      margins, switching between light and dark modes, selecting text,
+      searching the document, and using accessibility tools.
+    </p>
+
+    <h2>Test Complete</h2>
+
+    <p>
+      End of document.
+    </p>
+
+    <p class="page-number">Page 10 of 10</p>
+  </section>
+
+</body>
+</html>
