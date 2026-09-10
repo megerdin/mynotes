@@ -783,7 +783,7 @@ async function checkGitHubConflict(){
   if(ghToken && ghToken.value.trim())h.Authorization='Bearer '+ghToken.value.trim();
   const url=api+'/contents/'+d.path.split('/').map(encodeURIComponent).join('/')+'?ref='+encodeURIComponent(d.branch||'main');
   const res=await fetch(url,{headers:h});
-  const data=await readJson(res);
+  const data=await res.json().catch(()=>({}));
   if(!res.ok)throw new Error(data.message||('HTTP '+res.status));
   if(data.sha!==d.sha){
     const changedByOthers='The GitHub file changed since you opened it.';
