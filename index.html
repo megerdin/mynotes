@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V9.1.2</title><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V9.1.3</title><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -165,9 +165,9 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 
 </head>
 <body>
-<!-- ReaderEditor GitHub V9.1.2: Open, Save, Save As, and New repository files; HTML and plain-text support. -->
+<!-- ReaderEditor GitHub V9.1.3: Open, Save, Save As, and New repository files; HTML and plain-text support. -->
 <div id="toolbar"><button id="homeBtn" onclick="goHome()" title="Home / Index">⌂</button>
-<button id="githubBtn" title="GitHub">GitHub</button><button id="newBtn" title="New document">New</button><span id="versionFlag">ReaderEditor GitHub V9.1.2</span><span id="htmlModeBadge"></span>
+<button id="githubBtn" title="GitHub">GitHub</button><button id="newBtn" title="New document">New</button><span id="versionFlag">ReaderEditor GitHub V9.1.3</span><span id="htmlModeBadge"></span>
 <button onclick="prev()" title="Previous page">←</button><button onclick="next()" title="Next page">→</button>
 <input id="jump" min="1" title="Enter page number" type="number" value="1"/>
 <span id="pageInfo">Page …</span>
@@ -1218,9 +1218,20 @@ async function openGitHubFile(){
 
     window.githubDocument={owner:o,repo:r,branch:b,path:p,sha:data.sha||null,name:data.name||p.split('/').pop(),isHtml:html,htmlMode:html?mode:null,raw:raw};
     setHtmlModeBadge(html?mode:null);
+    // Let the browser finish laying out the newly loaded content before
+    // measuring pagination. This keeps V70's existing pagination engine intact.
+    reader.scrollLeft=0;
     invalidateMetrics();
     fitDiagrams();
-    update(true);
+    setTimeout(()=>{
+      invalidateMetrics();
+      const match=location.hash.match(/^#page=(\d+)$/i);
+      const requested=match?Number(match[1]):1;
+      const target=Math.max(1,Math.min(pageCount(),requested));
+      reader.scrollLeft=pageStart(target);
+      lastShownPage=0;
+      update(true);
+    },80);
     status.textContent='Opened ✓ '+(data.path||p);
     const es=document.getElementById('editStatus');
     if(es)es.textContent=html?(mode==='reader'?'HTML Reader loaded • '+(data.path||p):'Raw HTML loaded • '+(data.path||p)):'Raw text loaded • '+(data.path||p);
