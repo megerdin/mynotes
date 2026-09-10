@@ -1,12 +1,12 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V9.1.3</title><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub V9.1.6</title><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
 #toolbar{height:58px;transition:transform .22s ease,opacity .22s ease;background:var(--toolbar);backdrop-filter:blur(10px);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:7px;padding:7px 10px;position:absolute;top:0;left:0;right:0;z-index:20;box-shadow:var(--shadow)}
 button,input{font:inherit}button{border:1px solid var(--border);background:var(--paper);color:var(--text);border-radius:8px;padding:7px 10px;cursor:pointer}button:active{transform:scale(.98)}
-#reader{height:100vh;height:100dvh;min-height:0;overflow-x:hidden;overflow-y:hidden;position:relative;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain}
+#reader{height:100vh;height:100dvh;min-height:0;overflow-x:auto;overflow-y:hidden;position:relative;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:none}#reader::-webkit-scrollbar{display:none}
 #pages{height:100%;min-height:0;column-width:calc(100vw - 36px);column-gap:36px;column-fill:auto;padding:18px 18px 10px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,"Liberation Mono","Noto Sans Mono",monospace;font-size:var(--font);line-height:var(--lh);white-space:pre-wrap;word-break:normal;overflow:visible}
 #pages>*{max-width:100%}#pages{overflow:visible}#pages{background:var(--paper);box-shadow:var(--shadow)}
 #pages b,strong{font-weight:750;color:var(--text)}#pages a{color:var(--accent)}#pages pre{white-space:pre-wrap;font:inherit;margin:0}#pages code{font:inherit}
@@ -17,7 +17,7 @@ button,input{font:inherit}button{border:1px solid var(--border);background:var(-
 #toolbar.nav-hidden{transform:translateY(-110%);opacity:0;pointer-events:none}
 body.nav-hidden #reader{height:100dvh !important}
 #progress{position:absolute;left:0;bottom:-2px;height:2px;background:var(--accent);width:0;z-index:30}
-@media(max-width:600px){#toolbar{height:52px;padding:6px;gap:5px}#toolbar button{padding:6px 8px}#reader{height:100vh;height:100dvh;min-height:0}#pages{column-width:calc(100vw - 18px);column-gap:18px;padding:15px 9px 10px;font-size:var(--font);line-height:1.43}#pageInfo{font-size:12px}.desktopOnly{display:none}#jump{width:58px}}
+@media(max-width:600px){#toolbar{height:52px;padding:6px;gap:5px}#toolbar button{padding:6px 8px}#reader{height:100vh;height:100dvh;min-height:0;overflow-x:auto;overflow-y:hidden}#pages{column-width:calc(100vw - 18px);column-gap:18px;padding:15px 9px 10px;font-size:var(--font);line-height:1.43}#pageInfo{font-size:12px}.desktopOnly{display:none}#jump{width:58px}}
 @supports (height: 100svh){#reader{height:100svh;height:100dvh} }
 @media(max-width:600px){@supports (height: 100svh){#reader{height:100svh;height:100dvh}}}
 
@@ -165,9 +165,9 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 
 </head>
 <body>
-<!-- ReaderEditor GitHub V9.1.3: Open, Save, Save As, and New repository files; HTML and plain-text support. -->
+<!-- ReaderEditor GitHub V9.1.6: Open, Save, Save As, and New repository files; HTML and plain-text support. -->
 <div id="toolbar"><button id="homeBtn" onclick="goHome()" title="Home / Index">⌂</button>
-<button id="githubBtn" title="GitHub">GitHub</button><button id="newBtn" title="New document">New</button><span id="versionFlag">ReaderEditor GitHub V9.1.3</span><span id="htmlModeBadge"></span>
+<button id="githubBtn" title="GitHub">GitHub</button><button id="newBtn" title="New document">New</button><span id="versionFlag">ReaderEditor GitHub V9.1.6</span><span id="htmlModeBadge"></span>
 <button onclick="prev()" title="Previous page">←</button><button onclick="next()" title="Next page">→</button>
 <input id="jump" min="1" title="Enter page number" type="number" value="1"/>
 <span id="pageInfo">Page …</span>
@@ -233,30 +233,9 @@ const pageInfo=document.getElementById('pageInfo'), jump=document.getElementById
 const fontLabel=document.getElementById('fontLabel'), searchBox=document.getElementById('searchBox'), searchInput=document.getElementById('searchInput');
 let fontSize=Number(localStorage.getItem('ccnaFontSize')||17);
 let restoringInitialPage=true;
-function setFont(n){fontSize=Math.max(13,Math.min(25,n));document.documentElement.style.setProperty('--font',fontSize+'px');fontLabel.textContent=fontSize;localStorage.setItem('ccnaFontSize',fontSize);setTimeout(()=>{if(restoringInitialPage){invalidateMetrics();fitDiagrams();return;}recalcAfterContentChange();},80)}
+function setFont(n){fontSize=Math.max(13,Math.min(25,n));document.documentElement.style.setProperty('--font',fontSize+'px');fontLabel.textContent=fontSize;localStorage.setItem('ccnaFontSize',fontSize);setTimeout(()=>{invalidateMetrics();fitDiagrams();if(!restoringInitialPage) update(true)},80)}
 let metricsCache=null,totalPagesCache=1,lastShownPage=0,scrollTimer=null,navUpdateTimer=null;
 function invalidateMetrics(){metricsCache=null;totalPagesCache=1;}
-function recalcAfterContentChange(){
-  const imgs=Array.from(pages.querySelectorAll('img')).filter(img=>!img.complete);
-  const finish=()=>{
-    invalidateMetrics();
-    fitDiagrams();
-    // Two rAFs guarantee the column-layout reflow has actually
-    // finished before we read scrollWidth for pageCount().
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      invalidateMetrics();
-      update(true);
-    }));
-  };
-  if(!imgs.length){ finish(); return; }
-  let remaining=imgs.length;
-  const onDone=()=>{ if(--remaining<=0) finish(); };
-  imgs.forEach(img=>{
-    img.addEventListener('load',onDone,{once:true});
-    img.addEventListener('error',onDone,{once:true});
-  });
-  finish(); // immediate pass too, so it's not blank while images load
-}
 function pageMetrics(){
   if(metricsCache) return metricsCache;
   const cs=getComputedStyle(pages);
@@ -316,14 +295,7 @@ window.addEventListener('resize',()=>{
   clearTimeout(navUpdateTimer);
   const saved=Number(localStorage.getItem('ccnaPage')||1);
   invalidateMetrics();
-  navUpdateTimer=setTimeout(()=>{
-    fitDiagrams();
-    invalidateMetrics();
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      invalidateMetrics();
-      go(saved);
-    }));
-  },180);
+  navUpdateTimer=setTimeout(()=>{fitDiagrams();invalidateMetrics();go(saved);},180);
 });
 document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(document.body.classList.contains('editing') && e.target.closest && e.target.closest('#pages [contenteditable=\"true\"]')) return;if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();next()}else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev()}else if(e.key==='Home'){e.preventDefault();go(1)}else if(e.key==='End'){e.preventDefault();go(pageCount())}else if(e.key==='/'){e.preventDefault();toggleSearch()}});
 let sx=0,sy=0;reader.addEventListener('touchstart',e=>{sx=e.changedTouches[0].screenX;sy=e.changedTouches[0].screenY},{passive:true});reader.addEventListener('touchend',e=>{const dx=e.changedTouches[0].screenX-sx,dy=e.changedTouches[0].screenY-sy;if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.2){dx<0?next():prev()}},{passive:true});
@@ -588,7 +560,9 @@ function goHome(){
     editBtn.title='Desktop editing mode';
     status.textContent='Edit mode';
     document.activeElement?.blur();
-    recalcAfterContentChange();
+    invalidateMetrics();
+    fitDiagrams();
+    setTimeout(()=>update(true),80);
   }
 
   editBtn.onclick=()=>setEditing(!editing);
@@ -1244,7 +1218,57 @@ async function openGitHubFile(){
 
     window.githubDocument={owner:o,repo:r,branch:b,path:p,sha:data.sha||null,name:data.name||p.split('/').pop(),isHtml:html,htmlMode:html?mode:null,raw:raw};
     setHtmlModeBadge(html?mode:null);
-    recalcAfterContentChange();
+
+    // Rebuild the multicolumn geometry for dynamically loaded HTML.
+    // Measure the content once as a single column, then create exactly enough
+    // horizontal columns to hold it at the V70 page height/width.
+    const mobile=window.matchMedia('(max-width:600px)').matches;
+    const gap=mobile?18:36;
+    const pad=mobile?9:18;
+    const pageWidth=Math.max(1,reader.clientWidth-pad*2);
+    const pageHeight=Math.max(1,reader.clientHeight);
+
+    pages.style.height='auto';
+    pages.style.width=reader.clientWidth+'px';
+    pages.style.columnCount='1';
+    pages.style.columnWidth='auto';
+    pages.style.columnGap='0px';
+    pages.style.columnFill='auto';
+    void pages.offsetHeight;
+
+    const measuredHeight=pages.scrollHeight;
+    const usableHeight=Math.max(1,pageHeight-pad-10);
+    let columnCount=Math.max(1,Math.ceil((measuredHeight-pad)/usableHeight));
+
+    pages.style.height=pageHeight+'px';
+    pages.style.columnCount=String(columnCount);
+    pages.style.columnWidth=pageWidth+'px';
+    pages.style.columnGap=gap+'px';
+    pages.style.width=(columnCount*pageWidth+(columnCount-1)*gap+pad*2)+'px';
+    pages.style.columnFill='auto';
+    void pages.offsetHeight;
+
+    const pitch=pageWidth+gap;
+    const actualColumns=Math.max(1,Math.round((pages.scrollWidth-pad)/pitch));
+    if(actualColumns>columnCount){
+      columnCount=actualColumns;
+      pages.style.columnCount=String(columnCount);
+      pages.style.width=(columnCount*pageWidth+(columnCount-1)*gap+pad*2)+'px';
+      void pages.offsetHeight;
+    }
+
+    invalidateMetrics();
+    fitDiagrams();
+
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      invalidateMetrics();
+      const match=location.hash.match(/^#page=(\d+)$/i);
+      const requested=match?Number(match[1]):1;
+      const target=Math.max(1,Math.min(pageCount(),requested));
+      reader.scrollLeft=pageStart(target);
+      lastShownPage=0;
+      update(true);
+    }));
     status.textContent='Opened ✓ '+(data.path||p);
     const es=document.getElementById('editStatus');
     if(es)es.textContent=html?(mode==='reader'?'HTML Reader loaded • '+(data.path||p):'Raw HTML loaded • '+(data.path||p)):'Raw text loaded • '+(data.path||p);
