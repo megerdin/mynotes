@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title><script>const APP_VERSION='9.4.10';</script><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script><script>const APP_VERSION='9.4.9';</script><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -34,19 +35,6 @@ body.nav-hidden #reader{height:100dvh !important}
 #pages.content .code-block,#pages.content .diagram{display:block;box-sizing:border-box;width:100%;max-width:100%;margin:.45em 0 .55em;padding:.65em .7em;border:1px solid var(--border);border-radius:8px;background:var(--code);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,"Liberation Mono","Noto Sans Mono",monospace;font-size:clamp(10px, 1.9vw, 13px);line-height:1.35;white-space:pre;overflow-x:auto;overflow-y:hidden;break-inside:avoid-column;column-break-inside:avoid;color:var(--text);tab-size:4}
 #pages.content .diagram{font-size:var(--diagram-size,12px);line-height:1.15;text-align:left;padding:.55em .35em}
 #pages.content .github-plain-text{white-space:pre-wrap!important;overflow-wrap:normal;word-break:normal;break-inside:auto;column-break-inside:auto}
-#pages .syntax-keyword{color:#7c3aed;font-weight:650}
-#pages .syntax-string{color:#b45309}
-#pages .syntax-comment{color:#6b7280;font-style:italic}
-#pages .syntax-number{color:#0f766e}
-#pages .syntax-function{color:#2563eb}
-#pages .syntax-tag{color:#c2410c}
-[data-theme="dark"] #pages .syntax-keyword{color:#c4b5fd}
-[data-theme="dark"] #pages .syntax-string{color:#fbbf24}
-[data-theme="dark"] #pages .syntax-comment{color:#9ca3af}
-[data-theme="dark"] #pages .syntax-number{color:#5eead4}
-[data-theme="dark"] #pages .syntax-function{color:#93c5fd}
-[data-theme="dark"] #pages .syntax-tag{color:#fdba74}
-
 @media(max-width:600px){#pages.content{font-size:var(--font);line-height:1.43}#pages.content p{margin-bottom:.32em}#pages.content h2{font-size:1.06em;margin:.42em 0 .24em}#pages.content h3{font-size:1em;margin:.38em 0 .22em}#pages.content .code-block{font-size:11px;padding:.55em .55em;line-height:1.32}#pages.content .diagram{font-size:var(--diagram-size,9px);line-height:1.08;padding:.45em .2em}}
 
 #pages.content .ccna-index{margin:0 0 1em 0;padding:.7em .75em;border:1px solid var(--border);border-radius:10px;background:var(--paper);break-inside:avoid-column;break-after:column;column-span:none}
@@ -127,7 +115,80 @@ pre.ascii-diagram {
   padding-bottom: 0.12em;
   margin-bottom: 0.28em;
 }
-</style><style id="editorStyles">
+</style>
+<style id="syntaxHighlightStyles">
+/* V9.4.9 — syntax highlighting.  Highlighted source remains text-equivalent,
+   so saving never depends on the visual token markup. */
+#pages pre.syntax-highlighted{
+  color:var(--syntax-fg,var(--text));
+  background:var(--code);
+}
+#pages pre.syntax-highlighted .hljs-comment,
+#pages pre.syntax-highlighted .hljs-quote{
+  color:var(--syntax-comment);
+}
+#pages pre.syntax-highlighted .hljs-keyword,
+#pages pre.syntax-highlighted .hljs-selector-tag,
+#pages pre.syntax-highlighted .hljs-literal,
+#pages pre.syntax-highlighted .hljs-type,
+#pages pre.syntax-highlighted .hljs-built_in{
+  color:var(--syntax-keyword);
+}
+#pages pre.syntax-highlighted .hljs-string,
+#pages pre.syntax-highlighted .hljs-regexp,
+#pages pre.syntax-highlighted .hljs-symbol,
+#pages pre.syntax-highlighted .hljs-template-tag,
+#pages pre.syntax-highlighted .hljs-template-variable{
+  color:var(--syntax-string);
+}
+#pages pre.syntax-highlighted .hljs-number,
+#pages pre.syntax-highlighted .hljs-variable,
+#pages pre.syntax-highlighted .hljs-attr,
+#pages pre.syntax-highlighted .hljs-attribute{
+  color:var(--syntax-number);
+}
+#pages pre.syntax-highlighted .hljs-title,
+#pages pre.syntax-highlighted .hljs-title.class_,
+#pages pre.syntax-highlighted .hljs-title.function_,
+#pages pre.syntax-highlighted .hljs-function .hljs-title{
+  color:var(--syntax-title);
+}
+#pages pre.syntax-highlighted .hljs-meta,
+#pages pre.syntax-highlighted .hljs-meta .hljs-keyword{
+  color:var(--syntax-meta);
+}
+#pages pre.syntax-highlighted .hljs-tag,
+#pages pre.syntax-highlighted .hljs-name{
+  color:var(--syntax-tag);
+}
+#pages pre.syntax-highlighted .hljs-operator,
+#pages pre.syntax-highlighted .hljs-punctuation{
+  color:var(--syntax-punctuation);
+}
+:root{
+  --syntax-fg:#24292f;
+  --syntax-comment:#6e7781;
+  --syntax-keyword:#8250df;
+  --syntax-string:#0a3069;
+  --syntax-number:#0550ae;
+  --syntax-title:#953800;
+  --syntax-meta:#0550ae;
+  --syntax-tag:#116329;
+  --syntax-punctuation:#57606a;
+}
+[data-theme="dark"]{
+  --syntax-fg:#e6edf3;
+  --syntax-comment:#8b949e;
+  --syntax-keyword:#ff7b72;
+  --syntax-string:#a5d6ff;
+  --syntax-number:#79c0ff;
+  --syntax-title:#d2a8ff;
+  --syntax-meta:#79c0ff;
+  --syntax-tag:#7ee787;
+  --syntax-punctuation:#c9d1d9;
+}
+</style>
+<style id="editorStyles">
 #editBtn{font-weight:700}
 #editPanel{display:none;position:fixed;z-index:30;left:50%;transform:translateX(-50%);top:58px;background:var(--toolbar);border:1px solid var(--border);border-radius:10px;padding:6px;box-shadow:var(--shadow);gap:4px;align-items:center;backdrop-filter:blur(8px)}
 body.editing #editPanel{display:flex}
@@ -524,7 +585,6 @@ function goHome(){
      */
     if(rawPre && (window.githubDocument || window.localDocument) &&
        (!(window.githubDocument || window.localDocument).isHtml || (window.githubDocument || window.localDocument).htmlMode==='raw')){
-      removeSyntaxHighlighting(rawPre);
       rawEditing=true;
       rawEditScrollLeft=q.r.scrollLeft;
       rawEditPage=q.page;
@@ -608,6 +668,8 @@ function goHome(){
 
   function setEditing(on){
     if(on){
+      // Syntax highlighting is visual-only; restore plain source before editing.
+      if(window.readerEditorSyntax)window.readerEditorSyntax.unhighlightAll();
       editing=true;
       document.body.classList.add('editing');
       makeHost();
@@ -639,8 +701,8 @@ function goHome(){
     editBtn.title='Desktop editing mode';
     status.textContent='Edit mode';
     document.activeElement?.blur();
-    highlightCurrentRawFile();
     recalcAfterContentChange();
+    if(window.readerEditorSyntax)window.readerEditorSyntax.rehighlightAfterLoad();
   }
 
   document.addEventListener('input',()=>{
@@ -909,6 +971,7 @@ function goHome(){
     if(document.body.classList.contains('editing') && typeof exitEditing==='function')exitEditing();
 
     const p=pages();
+    if(window.readerEditorSyntax)window.readerEditorSyntax.unhighlightAll();
     p.replaceChildren();
 
     // New documents remain raw/plain-text documents, exactly like V7.1.0.
@@ -1055,11 +1118,11 @@ function goHome(){
       window.githubDocument=null;
       window.localDocument={name:name,isHtml:html,htmlMode:html?mode:null,raw:raw};
       setHtmlModeBadge(html?mode:null);
-      if(mode==='raw'||!html)highlightCurrentRawFile();
       dirty=false;
       if(typeof invalidateMetrics==='function')invalidateMetrics();
       if(typeof fitDiagrams==='function')fitDiagrams();
       if(typeof recalcAfterContentChange==='function')recalcAfterContentChange();
+      if(window.readerEditorSyntax)window.readerEditorSyntax.rehighlightAfterLoad();
       status.textContent='Opened local file ✓ '+name;
       const es=document.getElementById('editStatus');
       if(es)es.textContent=html?(mode==='reader'?'Local HTML Reader loaded • '+name:'Local raw HTML loaded • '+name):'Local raw text loaded • '+name;
@@ -1309,71 +1372,6 @@ function loadHtmlContent(html){
   return '';
 }
 
-function syntaxLanguage(name){
-  const n=(name||'').toLowerCase();
-  if(/\.py$/.test(n))return'python';
-  if(/\.(js|mjs|cjs)$/.test(n))return'javascript';
-  if(/\.java$/.test(n))return'java';
-  if(/\.json$/.test(n))return'json';
-  if(/\.(sh|bash)$/.test(n))return'bash';
-  if(/\.css$/.test(n))return'css';
-  if(/\.(html?|xhtml)$/.test(n))return'html';
-  return null;
-}
-function escapeSyntaxHtml(s){return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
-function syntaxPattern(lang){
-  const common={
-    python:'and|as|assert|async|await|break|case|class|continue|def|del|elif|else|except|False|finally|for|from|global|if|import|in|is|lambda|match|None|nonlocal|not|or|pass|raise|return|True|try|while|with|yield',
-    javascript:'as|async|await|break|case|catch|class|const|continue|debugger|default|delete|do|else|export|extends|false|finally|for|from|function|get|if|import|in|instanceof|let|new|null|of|return|set|static|super|switch|this|throw|true|try|typeof|var|void|while|with|yield',
-    java:'abstract|assert|boolean|break|byte|case|catch|char|class|const|continue|default|do|double|else|enum|extends|final|finally|float|for|if|implements|import|instanceof|int|interface|long|native|new|null|package|private|protected|public|return|short|static|strictfp|super|switch|synchronized|this|throw|throws|transient|true|false|try|void|volatile|while',
-    json:'true|false|null',
-    bash:'if|then|else|elif|fi|for|while|in|do|done|case|esac|function|select|time|until',
-    css:'important',
-    html:'html|head|body|title|style|script|div|span|p|a|button|input|main|section|header|footer|ul|ol|li|table|tr|td|th|form|label|meta|link'
-  };
-  return common[lang]||'';
-}
-function highlightRawPre(pre,name){
-  if(!pre||pre.dataset.syntaxHighlighted==='1')return;
-  const lang=syntaxLanguage(name);
-  if(!lang)return;
-  const source=pre.textContent||'';
-  if(!source)return;
-  const escaped=escapeSyntaxHtml(source);
-  let html=escaped;
-  if(lang==='html'){
-    html=html.replace(/(&lt;\/?)([A-Za-z][\w:-]*)(?=[\s&gt;\/])/g,'$1<span class="syntax-tag">$2</span>');
-    html=html.replace(/(&lt;!--[\s\S]*?--&gt;)/g,'<span class="syntax-comment">$1</span>');
-  }else{
-    const comments=lang==='python'?'#[^\n]*':lang==='bash'?'#[^\n]*':'\/\/[^\n]*|\/\*[\s\S]*?\*\/';
-    const strings="(?:&quot;(?:\\\\.|[^&quot;\\\\])*&quot;|'(?:\\\\.|[^'\\\\])*')";
-    const pattern=new RegExp('('+comments+')|('+strings+')|\\b(\\d+(?:\\.\\d+)?)\\b|\\b('+syntaxPattern(lang)+')\\b|\\b([A-Za-z_$][\\w$]*)(?=\\s*\\()', 'g');
-    html=html.replace(pattern,(m,cmt,str,num,kw,fn)=>{
-      if(cmt)return'<span class="syntax-comment">'+m+'</span>';
-      if(str)return'<span class="syntax-string">'+m+'</span>';
-      if(num)return'<span class="syntax-number">'+m+'</span>';
-      if(kw)return'<span class="syntax-keyword">'+m+'</span>';
-      if(fn)return'<span class="syntax-function">'+m+'</span>';
-      return m;
-    });
-  }
-  pre.innerHTML=html;
-  pre.dataset.syntaxHighlighted='1';
-}
-function removeSyntaxHighlighting(pre){
-  if(!pre||pre.dataset.syntaxHighlighted!=='1')return;
-  const text=pre.textContent||'';
-  pre.textContent=text;
-  delete pre.dataset.syntaxHighlighted;
-}
-function highlightCurrentRawFile(){
-  if(document.body.classList.contains('editing'))return;
-  const pre=document.querySelector('#pages > pre.github-plain-text');
-  if(!pre)return;
-  const d=window.githubDocument||window.localDocument;
-  highlightRawPre(pre,d?.path||d?.name||'');
-}
-
 function loadPlainText(text){
   const pre=document.createElement('pre');
   pre.className='github-plain-text';
@@ -1519,8 +1517,8 @@ async function openGitHubFile(){
 
     window.githubDocument={owner:o,repo:r,branch:b,path:p,sha:data.sha||null,name:data.name||p.split('/').pop(),isHtml:html,htmlMode:html?mode:null,raw:raw};
     setHtmlModeBadge(html?mode:null);
-    if(mode==='raw'||!html)highlightCurrentRawFile();
     recalcAfterContentChange();
+    if(window.readerEditorSyntax)window.readerEditorSyntax.rehighlightAfterLoad();
     status.textContent='Opened ✓ '+(data.path||p);
     const es=document.getElementById('editStatus');
     if(es)es.textContent=html?(mode==='reader'?'HTML Reader loaded • '+(data.path||p):'Raw HTML loaded • '+(data.path||p)):'Raw text loaded • '+(data.path||p);
@@ -1578,6 +1576,10 @@ loadConfig();
     const d=window.githubDocument;
     const pages=document.getElementById('pages');
 
+    // Syntax token spans are presentation only. Remove them before cloning so
+    // GitHub/local saves contain the original source rather than <span> markup.
+    if(window.readerEditorSyntax)window.readerEditorSyntax.unhighlightAll();
+
     // Every non-HTML file is saved as plain text. For a New document, the
     // editor uses DOM elements for visual constructs such as Line, Space and
     // CLI, so serialize those constructs instead of flattening them blindly.
@@ -1592,6 +1594,7 @@ loadConfig();
       root.querySelectorAll('pre.code-block').forEach(el=>el.replaceWith(document.createTextNode('\n'+el.textContent+'\n')));
 
       const plain=root.innerText.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+      if(window.readerEditorSyntax)window.readerEditorSyntax.rehighlightAfterLoad();
       return plain;
     }
 
@@ -1616,7 +1619,9 @@ loadConfig();
     doc.querySelectorAll('[spellcheck]').forEach(x=>x.removeAttribute('spellcheck'));
 
     const doctype='<!DOCTYPE html>\n';
-    return doctype+doc.documentElement.outerHTML;
+    const saved=doctype+doc.documentElement.outerHTML;
+    if(window.readerEditorSyntax)window.readerEditorSyntax.rehighlightAfterLoad();
+    return saved;
   }
 
   async function saveGitHub(){
@@ -1797,6 +1802,152 @@ loadConfig();
   window.githubGetCurrentContent=contentToSave;
   window.githubSaveCurrent=saveGitHub;
   window.githubSaveAs=saveGitHubAs;
+})();
+</script>
+
+
+<script id="v95-syntax-highlighting">
+(function(){
+  'use strict';
+
+  /*
+   * V9.4.9 syntax engine
+   * - Highlight.js provides the tokenisation.
+   * - The active file extension selects the grammar; no risky auto-detection
+   *   is used for ordinary prose/text files.
+   * - Highlighting is visual only.  Before editing/saving, token spans are
+   *   removed so the source text remains authoritative.
+   * - Re-highlighting is explicit after reload, GitHub open, local open,
+   *   session restore, and after leaving edit mode.
+   */
+
+  const EXTENSIONS = {
+    js:'javascript', mjs:'javascript', cjs:'javascript',
+    jsx:'javascript', ts:'typescript', mts:'typescript', cts:'typescript',
+    tsx:'typescript',
+    py:'python', pyw:'python',
+    sh:'bash', bash:'bash', zsh:'bash', ksh:'bash',
+    fish:'bash',
+    ps1:'powershell',
+    json:'json', jsonc:'json',
+    yaml:'yaml', yml:'yaml',
+    html:'xml', htm:'xml', xhtml:'xml', xml:'xml', svg:'xml',
+    css:'css', scss:'scss', less:'less',
+    sql:'sql',
+    md:'markdown', markdown:'markdown',
+    c:'c', h:'c', cc:'cpp', cpp:'cpp', cxx:'cpp', hpp:'cpp',
+    java:'java', kt:'kotlin', kts:'kotlin',
+    go:'go', rs:'rust', swift:'swift',
+    php:'php', rb:'ruby',
+    lua:'lua', r:'r', dart:'dart',
+    dockerfile:'dockerfile',
+    toml:'ini', ini:'ini', conf:'ini',
+    diff:'diff', patch:'diff',
+    makefile:'makefile'
+  };
+
+  const SPECIAL_NAMES = {
+    dockerfile:'dockerfile',
+    makefile:'makefile',
+    '.gitignore':'ini',
+    '.dockerignore':'ini',
+    '.editorconfig':'ini',
+    '.env':'bash'
+  };
+
+  function activeName(){
+    const d=window.githubDocument||window.localDocument;
+    if(!d)return '';
+    return String(d.path||d.name||'').trim();
+  }
+
+  function languageForName(name){
+    const base=name.split('/').pop().toLowerCase();
+    if(SPECIAL_NAMES[base])return SPECIAL_NAMES[base];
+
+    const dot=base.lastIndexOf('.');
+    if(dot<0)return null;
+    return EXTENSIONS[base.slice(dot+1)]||null;
+  }
+
+  function isRawSourceDocument(){
+    const d=window.githubDocument||window.localDocument;
+    if(!d)return false;
+    if(!d.isHtml)return true;
+    return d.htmlMode==='raw';
+  }
+
+  function sourceBlocks(){
+    const root=document.getElementById('pages');
+    if(!root)return [];
+    return Array.from(root.querySelectorAll('pre.github-plain-text,pre.code-block'));
+  }
+
+  function unhighlightBlock(pre){
+    if(!pre)return;
+    const text=pre.textContent;
+    pre.classList.remove('syntax-highlighted','hljs');
+    pre.removeAttribute('data-highlighted');
+    pre.removeAttribute('data-syntax-language');
+    pre.textContent=text;
+  }
+
+  function unhighlightAll(){
+    sourceBlocks().forEach(unhighlightBlock);
+  }
+
+  function highlightBlock(pre,language){
+    if(!window.hljs||!pre||!language)return false;
+
+    // Never highlight an active editor surface.
+    if(pre.isContentEditable || document.body.classList.contains('editing'))return false;
+
+    const text=pre.textContent;
+    if(!text)return false;
+
+    try{
+      const result=window.hljs.highlight(text,{language});
+      pre.innerHTML=result.value;
+      pre.classList.add('syntax-highlighted','hljs');
+      pre.dataset.highlighted='yes';
+      pre.dataset.syntaxLanguage=language;
+      return true;
+    }catch(e){
+      // Unknown/unsupported grammars must never prevent the document loading.
+      unhighlightBlock(pre);
+      return false;
+    }
+  }
+
+  function highlightAll(){
+    if(!window.hljs || !isRawSourceDocument())return;
+    const language=languageForName(activeName());
+    if(!language)return;
+
+    // A raw source document is normally one <pre>.  Multiple code blocks are
+    // supported as well, so editor-created CLI blocks also get the same grammar.
+    sourceBlocks().forEach(pre=>{
+      if(pre.classList.contains('syntax-highlighted'))return;
+      highlightBlock(pre,language);
+    });
+  }
+
+  function rehighlightAfterLoad(){
+    // Let DOM insertion + pagination settle first, then paint tokens.
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+      if(document.body.classList.contains('editing'))return;
+      highlightAll();
+      if(typeof invalidateMetrics==='function')invalidateMetrics();
+      if(typeof fitDiagrams==='function')fitDiagrams();
+    }));
+  }
+
+  window.readerEditorSyntax={
+    highlightAll,
+    unhighlightAll,
+    rehighlightAfterLoad,
+    languageForName
+  };
 })();
 </script>
 
@@ -2089,9 +2240,6 @@ async function restoreSession(){
       pre.style.color='var(--text)';
       pre.style.tabSize='4';
       pagesEl.appendChild(pre);
-      if((d.htmlMode==='raw'||!d.isHtml) && typeof highlightRawPre==='function'){
-        highlightRawPre(pre,d.path||d.name||'');
-      }
     }
 
     if(d.source==='local'){
@@ -2154,6 +2302,7 @@ async function restoreSession(){
       else status.textContent='Recovered session • '+(d.name||d.path||'document');
     }
 
+    if(window.readerEditorSyntax)window.readerEditorSyntax.rehighlightAfterLoad();
     lastSignature='';
   }catch(e){
     console.warn('ReaderEditor session restore failed:',e);
@@ -2211,6 +2360,12 @@ async function init(){
 }
 
 window.addEventListener('load',()=>setTimeout(init,20));
+
+// Normal reload: initial document is already in #pages; paint syntax after
+// the existing reader/session initialisation has had time to settle.
+window.addEventListener('load',()=>setTimeout(()=>{
+  if(window.readerEditorSyntax)window.readerEditorSyntax.rehighlightAfterLoad();
+},700));
 
 })();
 </script>
