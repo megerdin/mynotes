@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title><script>const APP_VERSION='9.5.0';</script><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title><script>const APP_VERSION='9.5.1';</script><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -181,7 +181,7 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 <button class="edit-tool" data-cmd="italic"><i>I</i></button>
 <button class="edit-tool" id="spaceBtn">＋ Space</button>
 <button class="edit-tool" id="lineBtn">＋ Line</button>
-<button class="edit-tool" id="cliBtn">CLI</button>
+<button class="edit-tool" id="cliBtn">CLI+</button><button class="edit-tool" id="cliNormalBtn">CLI-</button>
 <button class="edit-tool" id="saveBtn">Save</button>
 <button class="edit-tool" id="saveAsBtn">Save As</button>
 <span class="edit-status" id="editStatus">Edit mode</span>
@@ -752,6 +752,9 @@ function goHome(){
     sel.addRange(nr);
     savedRange=nr.cloneRange();
     markDirty();
+  };
+  document.getElementById('cliNormalBtn').onclick=()=>{
+    if(typeof convertCliToNormal==='function')convertCliToNormal();
   };
 
   document.addEventListener('input',e=>{
