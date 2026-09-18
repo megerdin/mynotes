@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title><script>const APP_VERSION='9.4.13';</script><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title><script>const APP_VERSION='9.4.14';</script><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -497,31 +497,52 @@ function goHome(){
    *
    * No cloned visual page and no whole-document editing surface are used.
    */
+  function visibleEditPage(){
+    const r=reader(), m=pageMetrics();
+    const centerX=(r.scrollLeft||0)+(r.clientWidth/2);
+    return Math.max(1,Math.min(pageCount(),Math.floor(Math.max(0,centerX-m.paddingLeft)/m.pitch)+1));
+  }
+
   function pageNodes(){
     const q=pageInfo();
-    const r=q.r, cs=q.cs;
-
-    /*
-     * Select the page that is physically visible in the reader viewport,
-     * rather than deriving its position from the logical page number.
-     * During smooth scrolling the page tracker can briefly lag behind the
-     * final scroll position; using the viewport itself prevents Edit from
-     * attaching to the previous column.
-     */
-    const rr=r.getBoundingClientRect();
-    const left=rr.left+(parseFloat(cs.paddingLeft)||0)+2;
-    const right=rr.right-(parseFloat(cs.paddingRight)||0)-2;
-    const top=rr.top+(parseFloat(cs.paddingTop)||0);
-    const bottom=rr.bottom-(parseFloat(cs.paddingBottom)||0);
+    const page=visibleEditPage();
+    const left=q.rr.left+(page-1)*q.pitch;
+    const right=left+q.width;
+    const top=q.rr.top;
+    const bottom=q.rr.bottom;
     const nodes=Array.from(q.p.children).filter(el=>!el.closest('.ccna-index'));
 
     return nodes.filter(el=>{
       const rects=Array.from(el.getClientRects ? el.getClientRects():[]);
       return rects.some(x=>
-        x.right>left && x.left<right &&
+        x.right>left+1 && x.left<right-1 &&
         x.bottom>top && x.top<bottom
       );
     });
+  }
+
+  function placeCaretInVisiblePage(){
+    if(!currentHost)return false;
+    const r=reader().getBoundingClientRect();
+    const x=r.left+r.width/2;
+    const ys=[r.top+r.height*0.30,r.top+r.height*0.50,r.top+r.height*0.70,r.top+r.height*0.15];
+    for(const y of ys){
+      let range=null;
+      try{
+        if(document.caretRangeFromPoint) range=document.caretRangeFromPoint(x,y);
+        else if(document.caretPositionFromPoint){
+          const pos=document.caretPositionFromPoint(x,y);
+          if(pos){range=document.createRange();range.setStart(pos.offsetNode,pos.offset);range.collapse(true);}
+        }
+      }catch(e){}
+      if(range && currentHost.contains(range.startContainer)){
+        const sel=window.getSelection();
+        sel.removeAllRanges();
+        sel.addRange(range);
+        return true;
+      }
+    }
+    return false;
   }
 
   function makeHost(){
@@ -627,7 +648,11 @@ function goHome(){
 
       if(currentHost){
         currentHost.focus({preventScroll:true});
-        if(rawEditing)reader().scrollLeft=rawEditScrollLeft;
+        if(rawEditing){
+          reader().scrollLeft=rawEditScrollLeft;
+        }else{
+          placeCaretInVisiblePage();
+        }
         editBtn.textContent='✓';
         editBtn.title='Exit editing mode';
         status.textContent=fileHandle?'Editing • file selected':'Editing • choose Open to enable same-file Save';
