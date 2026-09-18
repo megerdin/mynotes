@@ -301,7 +301,18 @@ window.addEventListener('resize',()=>setTimeout(fitDiagrams,80));
 const toolbar=document.getElementById('toolbar');
 let navHideTimer;
 function showNavigation(){toolbar.classList.remove('nav-hidden');document.body.classList.remove('nav-hidden');clearTimeout(navHideTimer);navHideTimer=setTimeout(hideNavigation,2000)}
-function hideNavigation(){if(document.activeElement && (document.activeElement.tagName==='INPUT'||document.activeElement.tagName==='BUTTON')) return;toolbar.classList.add('nav-hidden');document.body.classList.add('nav-hidden')}
+function hideNavigation(){
+  if(document.activeElement && (document.activeElement.tagName==='INPUT'||document.activeElement.tagName==='BUTTON')) return;
+  // BUGFIX (regression test): this only ever protected INPUT/BUTTON focus.
+  // While actively editing, the focused element is the contentEditable
+  // page host (a DIV/PRE), so this guard never matched - the whole
+  // toolbar (Save, Save As, Bold, +Line, +Space, CLI, even the checkmark
+  // to exit editing) silently disappeared ~2s into typing, with nothing
+  // that typing does resetting the hide timer. Keep it visible for the
+  // whole editing session; normal auto-hide resumes once editing exits.
+  if(document.body.classList.contains('editing')) return;
+  toolbar.classList.add('nav-hidden');document.body.classList.add('nav-hidden')
+}
 function currentPageSafe(){const w=reader?.getBoundingClientRect().width||1;return Math.max(1,Math.min(pageCount(),Math.round((reader?.scrollLeft||0)/w)+1))}
 function armNavigation(){clearTimeout(navHideTimer);navHideTimer=setTimeout(hideNavigation,2000)}
 // Show controls only when the user taps/clicks in the top third of the screen.
@@ -426,12 +437,40 @@ window.addEventListener('resize',()=>{
     invalidateMetrics();
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
       invalidateMetrics();
+      // BUGFIX (regression test): on mobile, opening/closing the on-screen
+      // keyboard fires a 'resize' event. Unconditionally jumping to the
+      // last *saved* page here yanked the user away from the page they
+      // were actively editing every time the keyboard toggled. While
+      // editing, just recalc metrics/page-count in place instead of
+      // forcing a page jump.
+      if(document.body.classList.contains('editing')){
+        update(true);
+        return;
+      }
       go(saved);
     }));
   },180);
 });
 document.addEventListener('keydown',e=>{if(e.target.tagName==='INPUT')return;if(document.body.classList.contains('editing')){const active=document.activeElement;const target=e.target;if((target&&target.closest&&target.closest('#pages [contenteditable="true"]'))||(active&&active.closest&&active.closest('#pages [contenteditable="true"]')))return;}if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){e.preventDefault();next()}else if(e.key==='ArrowLeft'||e.key==='PageUp'){e.preventDefault();prev()}else if(e.key==='Home'){e.preventDefault();go(1)}else if(e.key==='End'){e.preventDefault();go(pageCount())}else if(e.key==='/'){e.preventDefault();toggleSearch()}});
-let sx=0,sy=0;reader.addEventListener('touchstart',e=>{sx=e.changedTouches[0].screenX;sy=e.changedTouches[0].screenY},{passive:true});reader.addEventListener('touchend',e=>{const dx=e.changedTouches[0].screenX-sx,dy=e.changedTouches[0].screenY-sy;if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.2){dx<0?next():prev()}},{passive:true});
+let sx=0,sy=0,sTouchEditable=false;
+reader.addEventListener('touchstart',e=>{
+  const t=e.changedTouches[0];
+  sx=t.screenX;sy=t.screenY;
+  // BUGFIX (regression test): swipe-to-turn-page had no guard for editing
+  // mode at all. On touch devices, dragging a finger to select text inside
+  // the contentEditable page (a completely normal editing gesture) was
+  // indistinguishable from a page-turn swipe, so selecting text while
+  // editing could yank the reader to the next/previous page mid-selection.
+  // Mirrors the same '#pages [contenteditable="true"]' check already used
+  // by the keyboard-navigation handler below.
+  const tgt=e.target;
+  sTouchEditable=!!(document.body.classList.contains('editing') && tgt && tgt.closest && tgt.closest('#pages [contenteditable="true"]'));
+},{passive:true});
+reader.addEventListener('touchend',e=>{
+  if(sTouchEditable)return;
+  const dx=e.changedTouches[0].screenX-sx,dy=e.changedTouches[0].screenY-sy;
+  if(Math.abs(dx)>60&&Math.abs(dx)>Math.abs(dy)*1.2){dx<0?next():prev()}
+},{passive:true});
 function toggleSearch(){searchBox.style.display=searchBox.style.display==='block'?'none':'block';if(searchBox.style.display==='block')searchInput.focus()}
 document.getElementById('searchBtn').onclick=toggleSearch;
 let searchMatches=[],searchIndex=-1,searchQuery='';
@@ -1387,6 +1426,13 @@ function convertCliToNormal(){
   if(!root || !root.contains(range.commonAncestorContainer))return;
 
   root.querySelectorAll('pre.code-block').forEach(pre=>{
+    // BUGFIX (regression test): a raw/plain-text document's own top-level
+    // source container also carries the 'code-block' class (see New
+    // Document), but it is NOT an editor-inserted CLI snippet - it IS the
+    // document. Selecting through it and hitting Ctrl+Alt+N must not
+    // convert the whole raw source into a <p>, which would silently lose
+    // exact whitespace/line-break fidelity for the entire file.
+    if(pre.classList.contains('github-plain-text'))return;
     if(!seen.has(pre) && range.intersectsNode(pre)){
       seen.add(pre);
       blocks.push(pre);
