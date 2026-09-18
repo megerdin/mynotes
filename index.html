@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 
 <html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script><script>const APP_VERSION='10.0.2'; window.readerEditorDocumentGeneration=0;</script><style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script><script>const APP_VERSION='10.0.3'; window.readerEditorDocumentGeneration=0; window.readerEditorMarkDocumentOpen=()=>{window.readerEditorDocumentGeneration=(Number(window.readerEditorDocumentGeneration)||0)+1;};</script><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -555,10 +555,6 @@ function goHome(){
   const openBtn=document.getElementById('localOpenBtn');
   const status=document.getElementById('editStatus');
 
-  function markDocumentOpen(){
-    window.readerEditorDocumentGeneration=(Number(window.readerEditorDocumentGeneration)||0)+1;
-  }
-
   let editing=false,fileHandle=null,dirty=false,savedRange=null;
   let currentHost=null,currentNodes=[];
   let rawEditing=false,rawEditScrollLeft=0,rawEditPage=1;
@@ -1005,7 +1001,7 @@ function goHome(){
   async function newDocument(){
     if(dirty && !confirm('Discard unsaved changes and create a new document?'))return;
 
-    markDocumentOpen();
+    window.readerEditorMarkDocumentOpen();
     if(document.body.classList.contains('editing') && typeof exitEditing==='function')exitEditing();
 
     const p=pages();
@@ -1125,7 +1121,7 @@ function goHome(){
       const html=/\.(html?|xhtml)$/i.test(name);
       const mode=html?(confirm('HTML file detected.\n\nOK = Reader / HTML mode\nCancel = Raw / source mode')?'reader':'raw'):'raw';
 
-      markDocumentOpen();
+      window.readerEditorMarkDocumentOpen();
       if(document.body.classList.contains('editing'))exitEditing();
       document.getElementById('pages').replaceChildren();
 
@@ -1566,7 +1562,7 @@ async function openGitHubFile(){
     const mode=html?(chooseHtmlMode()?'reader':'raw'):'raw';
     const pages=document.getElementById('pages');
 
-    markDocumentOpen();
+    window.readerEditorMarkDocumentOpen();
     if(document.body.classList.contains('editing') && typeof exitEditing==='function')exitEditing();
     pages.replaceChildren();
 
