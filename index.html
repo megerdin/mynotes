@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.11.1/highlight.min.js"></script><script>const APP_VERSION='10.0.5'; window.readerEditorDocumentGeneration=0; window.readerEditorMarkDocumentOpen=()=>{window.readerEditorDocumentGeneration=(Number(window.readerEditorDocumentGeneration)||0)+1;};</script><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title><script>const APP_VERSION='9.4.8';</script><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -18,7 +17,7 @@ button,input{font:inherit}button{border:1px solid var(--border);background:var(-
 #toolbar.nav-hidden{transform:translateY(-110%);opacity:0;pointer-events:none}
 body.nav-hidden #reader{height:100dvh !important}
 #progress{position:absolute;left:0;bottom:-2px;height:2px;background:var(--accent);width:0;z-index:30}
-@media(max-width:600px){#toolbar{height:52px;padding:6px;gap:5px;overflow-x:auto;overflow-y:hidden;flex-wrap:nowrap;scrollbar-width:none;-webkit-overflow-scrolling:touch}#toolbar::-webkit-scrollbar{display:none}#toolbar>*{flex:0 0 auto}#toolbar button{padding:6px 8px}#reader{height:100vh;height:100dvh;min-height:0}#pages{column-width:calc(100vw - 18px);column-gap:18px;padding:15px 9px 10px;font-size:var(--font);line-height:1.43}#pageInfo{font-size:12px}.desktopOnly{display:none}#jump{width:58px}}
+@media(max-width:600px){#toolbar{height:52px;padding:6px;gap:5px}#toolbar button{padding:6px 8px}#reader{height:100vh;height:100dvh;min-height:0}#pages{column-width:calc(100vw - 18px);column-gap:18px;padding:15px 9px 10px;font-size:var(--font);line-height:1.43}#pageInfo{font-size:12px}.desktopOnly{display:none}#jump{width:58px}}
 @supports (height: 100svh){#reader{height:100svh;height:100dvh} }
 @media(max-width:600px){@supports (height: 100svh){#reader{height:100svh;height:100dvh}}}
 
@@ -115,80 +114,7 @@ pre.ascii-diagram {
   padding-bottom: 0.12em;
   margin-bottom: 0.28em;
 }
-</style>
-<style id="syntaxHighlightStyles">
-/* Syntax highlighting. Highlighted source remains text-equivalent,
-   so saving never depends on the visual token markup. */
-#pages pre.syntax-highlighted{
-  color:var(--syntax-fg,var(--text));
-  background:var(--code);
-}
-#pages pre.syntax-highlighted .hljs-comment,
-#pages pre.syntax-highlighted .hljs-quote{
-  color:var(--syntax-comment);
-}
-#pages pre.syntax-highlighted .hljs-keyword,
-#pages pre.syntax-highlighted .hljs-selector-tag,
-#pages pre.syntax-highlighted .hljs-literal,
-#pages pre.syntax-highlighted .hljs-type,
-#pages pre.syntax-highlighted .hljs-built_in{
-  color:var(--syntax-keyword);
-}
-#pages pre.syntax-highlighted .hljs-string,
-#pages pre.syntax-highlighted .hljs-regexp,
-#pages pre.syntax-highlighted .hljs-symbol,
-#pages pre.syntax-highlighted .hljs-template-tag,
-#pages pre.syntax-highlighted .hljs-template-variable{
-  color:var(--syntax-string);
-}
-#pages pre.syntax-highlighted .hljs-number,
-#pages pre.syntax-highlighted .hljs-variable,
-#pages pre.syntax-highlighted .hljs-attr,
-#pages pre.syntax-highlighted .hljs-attribute{
-  color:var(--syntax-number);
-}
-#pages pre.syntax-highlighted .hljs-title,
-#pages pre.syntax-highlighted .hljs-title.class_,
-#pages pre.syntax-highlighted .hljs-title.function_,
-#pages pre.syntax-highlighted .hljs-function .hljs-title{
-  color:var(--syntax-title);
-}
-#pages pre.syntax-highlighted .hljs-meta,
-#pages pre.syntax-highlighted .hljs-meta .hljs-keyword{
-  color:var(--syntax-meta);
-}
-#pages pre.syntax-highlighted .hljs-tag,
-#pages pre.syntax-highlighted .hljs-name{
-  color:var(--syntax-tag);
-}
-#pages pre.syntax-highlighted .hljs-operator,
-#pages pre.syntax-highlighted .hljs-punctuation{
-  color:var(--syntax-punctuation);
-}
-:root{
-  --syntax-fg:#24292f;
-  --syntax-comment:#6e7781;
-  --syntax-keyword:#8250df;
-  --syntax-string:#0a3069;
-  --syntax-number:#0550ae;
-  --syntax-title:#953800;
-  --syntax-meta:#0550ae;
-  --syntax-tag:#116329;
-  --syntax-punctuation:#57606a;
-}
-[data-theme="dark"]{
-  --syntax-fg:#e6edf3;
-  --syntax-comment:#8b949e;
-  --syntax-keyword:#ff7b72;
-  --syntax-string:#a5d6ff;
-  --syntax-number:#79c0ff;
-  --syntax-title:#d2a8ff;
-  --syntax-meta:#79c0ff;
-  --syntax-tag:#7ee787;
-  --syntax-punctuation:#c9d1d9;
-}
-</style>
-<style id="editorStyles">
+</style><style id="editorStyles">
 #editBtn{font-weight:700}
 #editPanel{display:none;position:fixed;z-index:30;left:50%;transform:translateX(-50%);top:58px;background:var(--toolbar);border:1px solid var(--border);border-radius:10px;padding:6px;box-shadow:var(--shadow);gap:4px;align-items:center;backdrop-filter:blur(8px)}
 body.editing #editPanel{display:flex}
@@ -368,15 +294,6 @@ function update(force=false){
   const progressEl=document.getElementById('progress');
   if(progressEl) progressEl.style.width=(p/total*100)+'%';
   localStorage.setItem('ccnaPage',p);
-  try{
-    const d=window.githubDocument||window.localDocument;
-    if(d){
-      const key=d.source==='github'
-        ? 'github:'+d.owner+'/'+d.repo+'/'+d.branch+'/'+d.path
-        : 'local:'+d.name;
-      localStorage.setItem('ccnaPage:'+key,p);
-    }
-  }catch(e){}
   // Keep the current logical page in the URL so a normal browser reload
   // returns to exactly the page the user was reading.
   const hash=`#page=${p}`;
@@ -385,17 +302,6 @@ function update(force=false){
   // keeps local and GitHub documents on the same page-persistence path.
   if(typeof schedulePersist==='function') schedulePersist('page',20);
 }
-function persistedDocumentPage(d){
-  try{
-    if(!d)return 1;
-    const key=d.source==='github'
-      ? 'github:'+d.owner+'/'+d.repo+'/'+d.branch+'/'+d.path
-      : 'local:'+d.name;
-    const value=Number(localStorage.getItem('ccnaPage:'+key));
-    return value>0?value:1;
-  }catch(e){return 1;}
-}
-
 function go(n){
   n=Math.max(1,Math.min(pageCount(),Number(n)||1));
   const x=pageStart(n);
@@ -688,8 +594,6 @@ function goHome(){
 
   function setEditing(on){
     if(on){
-      // Syntax highlighting is visual-only; restore plain source before editing.
-      if(window.readerEditorSyntax)window.readerEditorSyntax.unhighlightAll();
       editing=true;
       document.body.classList.add('editing');
       makeHost();
@@ -722,27 +626,7 @@ function goHome(){
     status.textContent='Edit mode';
     document.activeElement?.blur();
     recalcAfterContentChange();
-    if(window.readerEditorSyntax)window.readerEditorSyntax.rehighlightAfterLoad();
   }
-
-  // Save/session serializers must include the page-local V62 editing host.
-  // Temporarily restore the edited nodes to #pages, serialize, then rebuild
-  // the same editing host without changing the user's editing state.
-  window.readerEditorSerializeWithEditHost=function(serializer){
-    const wasEditing=editing;
-    if(wasEditing){
-      rememberSelection();
-      removeHost();
-    }
-    try{
-      return serializer();
-    }finally{
-      if(wasEditing){
-        makeHost();
-        restoreSelection();
-      }
-    }
-  };
 
   document.addEventListener('input',()=>{
     if(!editing || !rawEditing)return;
@@ -943,9 +827,25 @@ function goHome(){
   }
 
   async function saveToHandle(){
-    const source=(window.localDocument && typeof window.readerEditorGetLocalContent==='function')
-      ? window.readerEditorGetLocalContent()
-      : cleanClone();
+    const html=cleanClone();
+
+    if(location.protocol==='http:'&&(location.hostname==='127.0.0.1'||location.hostname==='localhost')){
+      try{
+        const name=decodeURIComponent(location.pathname.split('/').pop()||'CCNA_Study_Notes_Reader_v62.html');
+        const r=await fetch('/__save?file='+encodeURIComponent(name),{
+          method:'POST',
+          headers:{'Content-Type':'text/html;charset=utf-8'},
+          body:html
+        });
+        if(!r.ok)throw new Error(await r.text()||('HTTP '+r.status));
+        dirty=false;
+        status.textContent='Saved ✓ '+new Date().toLocaleTimeString();
+        return true;
+      }catch(e){
+        status.textContent='Save failed: '+e.message;
+        return false;
+      }
+    }
 
     if(!await ensureHandle())return false;
     try{
@@ -956,7 +856,7 @@ function goHome(){
         }
       }
       const writable=await fileHandle.createWritable();
-      await writable.write(source);
+      await writable.write(html);
       await writable.close();
       dirty=false;
       status.textContent='Saved ✓ '+new Date().toLocaleTimeString();
@@ -991,14 +891,12 @@ function goHome(){
   async function newDocument(){
     if(dirty && !confirm('Discard unsaved changes and create a new document?'))return;
 
-    window.readerEditorMarkDocumentOpen();
     if(document.body.classList.contains('editing') && typeof exitEditing==='function')exitEditing();
 
     const p=pages();
-    if(window.readerEditorSyntax)window.readerEditorSyntax.unhighlightAll();
     p.replaceChildren();
 
-    // New documents remain raw/plain-text documents.
+    // New documents remain raw/plain-text documents, exactly like V7.1.0.
     // The editor may add visual DOM elements (Line, Space, CLI), but the
     // GitHub serializer converts those editor constructs back to plain text.
     const pre=document.createElement('pre');
@@ -1047,21 +945,10 @@ function goHome(){
       return;
     }
 
-    const local=!!window.localDocument;
-    const content=local && typeof window.readerEditorGetLocalContent==='function'
-      ? window.readerEditorGetLocalContent()
-      : cleanClone();
-    const isHtml=local ? !!window.localDocument.isHtml : true;
-    const blob=new Blob([content],{type:isHtml?'text/html;charset=utf-8':'text/plain;charset=utf-8'});
+    const blob=new Blob([cleanClone()],{type:'text/html;charset=utf-8'});
     const a=document.createElement('a');
     a.href=URL.createObjectURL(blob);
-    if(local){
-      const name=window.localDocument.name||'edited-file.txt';
-      const dot=name.lastIndexOf('.');
-      a.download=(dot>0?name.slice(0,dot):name)+'_edited'+(dot>0?name.slice(dot):'');
-    }else{
-      a.download='CCNA_Study_Notes_edited.html';
-    }
+    a.download='CCNA_Study_Notes_edited.html';
     a.click();
     setTimeout(()=>URL.revokeObjectURL(a.href),1000);
     dirty=false;
@@ -1111,7 +998,6 @@ function goHome(){
       const html=/\.(html?|xhtml)$/i.test(name);
       const mode=html?(confirm('HTML file detected.\n\nOK = Reader / HTML mode\nCancel = Raw / source mode')?'reader':'raw'):'raw';
 
-      window.readerEditorMarkDocumentOpen();
       if(document.body.classList.contains('editing'))exitEditing();
       document.getElementById('pages').replaceChildren();
 
@@ -1158,7 +1044,6 @@ function goHome(){
       if(typeof invalidateMetrics==='function')invalidateMetrics();
       if(typeof fitDiagrams==='function')fitDiagrams();
       if(typeof recalcAfterContentChange==='function')recalcAfterContentChange();
-      if(window.readerEditorSyntax)window.readerEditorSyntax.rehighlightAfterLoad();
       status.textContent='Opened local file ✓ '+name;
       const es=document.getElementById('editStatus');
       if(es)es.textContent=html?(mode==='reader'?'Local HTML Reader loaded • '+name:'Local raw HTML loaded • '+name):'Local raw text loaded • '+name;
@@ -1166,14 +1051,6 @@ function goHome(){
       // A local open is a new active document. Persist it immediately so it
       // replaces any previously restored GitHub/local session on reload.
       if(typeof window.readerEditorPersistSession==='function')window.readerEditorPersistSession();
-      setTimeout(()=>{
-        try{
-          if(window.localDocument && typeof currentPage==='function'){
-            localStorage.setItem('ccnaPage:local:'+window.localDocument.name,String(currentPage()));
-            if(typeof window.readerEditorPersistSession==='function')window.readerEditorPersistSession();
-          }
-        }catch(e){}
-      },260);
     }catch(e){
       status.textContent='Open failed: '+(e.message||e);
     }
@@ -1450,8 +1327,6 @@ function setHtmlModeBadge(mode){
   else badge.style.display='none';
 }
 
-window.setHtmlModeBadge=setHtmlModeBadge;
-
 function parentPath(p){const a=p.split('/').filter(Boolean);a.pop();return a.join('/')}
 function setBrowserPath(p){
   browserPath.textContent=p||'Repository root';
@@ -1552,7 +1427,6 @@ async function openGitHubFile(){
     const mode=html?(chooseHtmlMode()?'reader':'raw'):'raw';
     const pages=document.getElementById('pages');
 
-    window.readerEditorMarkDocumentOpen();
     if(document.body.classList.contains('editing') && typeof exitEditing==='function')exitEditing();
     pages.replaceChildren();
 
@@ -1565,7 +1439,6 @@ async function openGitHubFile(){
     window.githubDocument={owner:o,repo:r,branch:b,path:p,sha:data.sha||null,name:data.name||p.split('/').pop(),isHtml:html,htmlMode:html?mode:null,raw:raw};
     setHtmlModeBadge(html?mode:null);
     recalcAfterContentChange();
-    if(window.readerEditorSyntax)window.readerEditorSyntax.rehighlightAfterLoad();
     status.textContent='Opened ✓ '+(data.path||p);
     const es=document.getElementById('editStatus');
     if(es)es.textContent=html?(mode==='reader'?'HTML Reader loaded • '+(data.path||p):'Raw HTML loaded • '+(data.path||p)):'Raw text loaded • '+(data.path||p);
@@ -1619,24 +1492,9 @@ loadConfig();
     return btoa(binary);
   }
 
-  function contentToSave(skipEditHost=false){
+  function contentToSave(){
     const d=window.githubDocument;
     const pages=document.getElementById('pages');
-    if(!d)return null;
-
-    // V62 moves the current HTML Reader page into a temporary editing host
-    // outside #pages. Restore those nodes only for serialization, then return
-    // to the same editing state. Raw/TXT documents stay in-place and need no
-    // host reconstruction here.
-    if(!skipEditHost && d.isHtml && d.htmlMode==='reader' &&
-       document.body.classList.contains('editing') &&
-       typeof window.readerEditorSerializeWithEditHost==='function'){
-      return window.readerEditorSerializeWithEditHost(()=>contentToSave(true));
-    }
-
-    // Syntax token spans are presentation only. Remove them before cloning so
-    // GitHub/local saves contain the original source rather than <span> markup.
-    if(window.readerEditorSyntax)window.readerEditorSyntax.unhighlightAll();
 
     // Every non-HTML file is saved as plain text. For a New document, the
     // editor uses DOM elements for visual constructs such as Line, Space and
@@ -1649,19 +1507,9 @@ loadConfig();
       // editing, so do not return pre.textContent before serializing it.
       root.querySelectorAll('.edit-spacer').forEach(el=>el.replaceWith(document.createTextNode('\n')));
       root.querySelectorAll('.manual-rule').forEach(el=>el.replaceWith(document.createTextNode('\n--------------------\n')));
-      root.querySelectorAll('pre.code-block').forEach(el=>{
-        // The New-document editor uses one top-level pre that is both a
-        // code-block and github-plain-text. Preserve that source verbatim;
-        // only standalone CLI blocks receive separator newlines.
-        if(el.classList.contains('github-plain-text')){
-          el.replaceWith(document.createTextNode(el.textContent));
-        }else{
-          el.replaceWith(document.createTextNode('\n'+el.textContent+'\n'));
-        }
-      });
+      root.querySelectorAll('pre.code-block').forEach(el=>el.replaceWith(document.createTextNode('\n'+el.textContent+'\n')));
 
       const plain=root.innerText.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
-      if(window.readerEditorSyntax)window.readerEditorSyntax.rehighlightAfterLoad();
       return plain;
     }
 
@@ -1686,9 +1534,7 @@ loadConfig();
     doc.querySelectorAll('[spellcheck]').forEach(x=>x.removeAttribute('spellcheck'));
 
     const doctype='<!DOCTYPE html>\n';
-    const saved=doctype+doc.documentElement.outerHTML;
-    if(window.readerEditorSyntax)window.readerEditorSyntax.rehighlightAfterLoad();
-    return saved;
+    return doctype+doc.documentElement.outerHTML;
   }
 
   async function saveGitHub(){
@@ -1758,8 +1604,6 @@ loadConfig();
       const data=await res.json().catch(()=>({}));
 
       if(!res.ok){
-        // Handle GitHub's server-side rejection only. There is no pre-save
-        // conflict-detection or separate conflict workflow in ReaderEditor.
         if(res.status===409||res.status===422){
           throw new Error('GitHub rejected the update. The file may have changed; reopen it before saving.');
         }
@@ -1871,152 +1715,6 @@ loadConfig();
   window.githubGetCurrentContent=contentToSave;
   window.githubSaveCurrent=saveGitHub;
   window.githubSaveAs=saveGitHubAs;
-})();
-</script>
-
-
-<script id="v95-syntax-highlighting">
-(function(){
-  'use strict';
-
-  /*
-   * Syntax highlighting engine
-   * - Highlight.js provides the tokenisation.
-   * - The active file extension selects the grammar; no risky auto-detection
-   *   is used for ordinary prose/text files.
-   * - Highlighting is visual only.  Before editing/saving, token spans are
-   *   removed so the source text remains authoritative.
-   * - Re-highlighting is explicit after reload, GitHub open, local open,
-   *   session restore, and after leaving edit mode.
-   */
-
-  const EXTENSIONS = {
-    js:'javascript', mjs:'javascript', cjs:'javascript',
-    jsx:'javascript', ts:'typescript', mts:'typescript', cts:'typescript',
-    tsx:'typescript',
-    py:'python', pyw:'python',
-    sh:'bash', bash:'bash', zsh:'bash', ksh:'bash',
-    fish:'bash',
-    ps1:'powershell',
-    json:'json', jsonc:'json',
-    yaml:'yaml', yml:'yaml',
-    html:'xml', htm:'xml', xhtml:'xml', xml:'xml', svg:'xml',
-    css:'css', scss:'scss', less:'less',
-    sql:'sql',
-    md:'markdown', markdown:'markdown',
-    c:'c', h:'c', cc:'cpp', cpp:'cpp', cxx:'cpp', hpp:'cpp',
-    java:'java', kt:'kotlin', kts:'kotlin',
-    go:'go', rs:'rust', swift:'swift',
-    php:'php', rb:'ruby',
-    lua:'lua', r:'r', dart:'dart',
-    dockerfile:'dockerfile',
-    toml:'ini', ini:'ini', conf:'ini',
-    diff:'diff', patch:'diff',
-    makefile:'makefile'
-  };
-
-  const SPECIAL_NAMES = {
-    dockerfile:'dockerfile',
-    makefile:'makefile',
-    '.gitignore':'ini',
-    '.dockerignore':'ini',
-    '.editorconfig':'ini',
-    '.env':'bash'
-  };
-
-  function activeName(){
-    const d=window.githubDocument||window.localDocument;
-    if(!d)return '';
-    return String(d.path||d.name||'').trim();
-  }
-
-  function languageForName(name){
-    const base=name.split('/').pop().toLowerCase();
-    if(SPECIAL_NAMES[base])return SPECIAL_NAMES[base];
-
-    const dot=base.lastIndexOf('.');
-    if(dot<0)return null;
-    return EXTENSIONS[base.slice(dot+1)]||null;
-  }
-
-  function isRawSourceDocument(){
-    const d=window.githubDocument||window.localDocument;
-    if(!d)return false;
-    if(!d.isHtml)return true;
-    return d.htmlMode==='raw';
-  }
-
-  function sourceBlocks(){
-    const root=document.getElementById('pages');
-    if(!root)return [];
-    return Array.from(root.querySelectorAll('pre.github-plain-text,pre.code-block'));
-  }
-
-  function unhighlightBlock(pre){
-    if(!pre)return;
-    const text=pre.textContent;
-    pre.classList.remove('syntax-highlighted','hljs');
-    pre.removeAttribute('data-highlighted');
-    pre.removeAttribute('data-syntax-language');
-    pre.textContent=text;
-  }
-
-  function unhighlightAll(){
-    sourceBlocks().forEach(unhighlightBlock);
-  }
-
-  function highlightBlock(pre,language){
-    if(!window.hljs||!pre||!language)return false;
-
-    // Never highlight an active editor surface.
-    if(pre.isContentEditable || document.body.classList.contains('editing'))return false;
-
-    const text=pre.textContent;
-    if(!text)return false;
-
-    try{
-      const result=window.hljs.highlight(text,{language});
-      pre.innerHTML=result.value;
-      pre.classList.add('syntax-highlighted','hljs');
-      pre.dataset.highlighted='yes';
-      pre.dataset.syntaxLanguage=language;
-      return true;
-    }catch(e){
-      // Unknown/unsupported grammars must never prevent the document loading.
-      unhighlightBlock(pre);
-      return false;
-    }
-  }
-
-  function highlightAll(){
-    if(!window.hljs || !isRawSourceDocument())return;
-    const language=languageForName(activeName());
-    if(!language)return;
-
-    // A raw source document is normally one <pre>.  Multiple code blocks are
-    // supported as well, so editor-created CLI blocks also get the same grammar.
-    sourceBlocks().forEach(pre=>{
-      if(pre.classList.contains('syntax-highlighted'))return;
-      highlightBlock(pre,language);
-    });
-  }
-
-  function rehighlightAfterLoad(){
-    // Let DOM insertion + pagination settle first, then paint tokens.
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      if(document.body.classList.contains('editing'))return;
-      highlightAll();
-      if(typeof invalidateMetrics==='function')invalidateMetrics();
-      if(typeof fitDiagrams==='function')fitDiagrams();
-    }));
-  }
-
-  window.readerEditorSyntax={
-    highlightAll,
-    unhighlightAll,
-    rehighlightAfterLoad,
-    languageForName
-  };
 })();
 </script>
 
@@ -2144,71 +1842,34 @@ function currentContent(){
     // Local raw/plain-text documents have no GitHub serializer. Reuse the
     // same V70 text normalization used by the editor so edits, blank lines,
     // spaces and inserted editor constructs are persisted correctly.
-    if(window.localDocument && typeof window.readerEditorGetLocalContent==='function'){
-      return window.readerEditorGetLocalContent();
+    if(!d.isHtml || d.htmlMode==='raw'){
+      const root=pages.cloneNode(true);
+      root.querySelectorAll('.edit-spacer').forEach(el=>el.replaceWith(document.createTextNode('\n')));
+      root.querySelectorAll('.manual-rule').forEach(el=>el.replaceWith(document.createTextNode('\n--------------------\n')));
+      root.querySelectorAll('pre.code-block').forEach(el=>el.replaceWith(document.createTextNode('\n'+el.textContent+'\n')));
+      return root.innerText.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
     }
+
+    // Local HTML Reader documents need the same preservation model as GitHub
+    // HTML: keep the original document and replace only its visible #pages
+    // region, preserving head/CSS/scripts in the stored source.
+    const doc=new DOMParser().parseFromString(d.raw||'','text/html');
+    const sourcePages=doc.querySelector('#pages');
+    if(sourcePages){
+      sourcePages.innerHTML=pages.innerHTML;
+    }else if(doc.body){
+      const scripts=Array.from(doc.body.querySelectorAll('script')).map(x=>x.cloneNode(true));
+      doc.body.innerHTML=pages.innerHTML;
+      scripts.forEach(x=>doc.body.appendChild(x));
+    }else{
+      return d.raw||'';
+    }
+    doc.querySelectorAll('[contenteditable]').forEach(x=>x.removeAttribute('contenteditable'));
+    doc.querySelectorAll('[spellcheck]').forEach(x=>x.removeAttribute('spellcheck'));
+    return '<!DOCTYPE html>\n'+doc.documentElement.outerHTML;
   }catch(e){}
   return null;
 }
-
-function localContentToSave(){
-  const d=window.localDocument;
-  const pages=document.getElementById('pages');
-  if(!d||!pages)return null;
-
-  const serialize=()=>{
-    try{
-      if(window.readerEditorSyntax)window.readerEditorSyntax.unhighlightAll();
-
-      if(!d.isHtml || d.htmlMode==='raw'){
-        const root=pages.cloneNode(true);
-        root.querySelectorAll('.edit-spacer').forEach(el=>el.replaceWith(document.createTextNode('\n')));
-        root.querySelectorAll('.manual-rule').forEach(el=>el.replaceWith(document.createTextNode('\n--------------------\n')));
-        root.querySelectorAll('pre.code-block').forEach(el=>{
-        // The New-document editor uses one top-level pre that is both a
-        // code-block and github-plain-text. Preserve that source verbatim;
-        // only standalone CLI blocks receive separator newlines.
-        if(el.classList.contains('github-plain-text')){
-          el.replaceWith(document.createTextNode(el.textContent));
-        }else{
-          el.replaceWith(document.createTextNode('\n'+el.textContent+'\n'));
-        }
-      });
-
-        const plainPre=root.querySelector(':scope > pre.github-plain-text');
-        if(plainPre && root.children.length===1 && !root.querySelector('.edit-spacer,.manual-rule,pre.code-block')){
-          return plainPre.textContent.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
-        }
-        return root.innerText.replace(/\r\n/g,'\n').replace(/\r/g,'\n');
-      }
-
-      const doc=new DOMParser().parseFromString(d.raw||'','text/html');
-      const sourcePages=doc.querySelector('#pages');
-      if(sourcePages){
-        sourcePages.innerHTML=pages.innerHTML;
-      }else if(doc.body){
-        const scripts=Array.from(doc.body.querySelectorAll('script')).map(x=>x.cloneNode(true));
-        doc.body.innerHTML=pages.innerHTML;
-        scripts.forEach(x=>doc.body.appendChild(x));
-      }else{
-        return d.raw||'';
-      }
-      doc.querySelectorAll('[contenteditable]').forEach(x=>x.removeAttribute('contenteditable'));
-      doc.querySelectorAll('[spellcheck]').forEach(x=>x.removeAttribute('spellcheck'));
-      return '<!DOCTYPE html>\n'+doc.documentElement.outerHTML;
-    }catch(e){
-      return null;
-    }finally{
-      if(window.readerEditorSyntax)window.readerEditorSyntax.rehighlightAfterLoad();
-    }
-  };
-
-  if(typeof window.readerEditorSerializeWithEditHost==='function')
-    return window.readerEditorSerializeWithEditHost(serialize);
-  return serialize();
-}
-
-window.readerEditorGetLocalContent=localContentToSave;
 
 function currentPageNumber(){
   try{
@@ -2291,10 +1952,8 @@ function installSaveHooks(){
 }
 
 async function restoreSession(){
-  const restoreGeneration=Number(window.readerEditorDocumentGeneration)||0;
   let record=null;
   try{record=await dbGet();}catch(e){return;}
-  if(restoreGeneration!==(Number(window.readerEditorDocumentGeneration)||0))return;
 
   if(!record || !record.document || typeof record.content!=='string')return;
 
@@ -2304,7 +1963,6 @@ async function restoreSession(){
     const d=record.document;
     const pagesEl=document.getElementById('pages');
     if(!pagesEl)return;
-    if(restoreGeneration!==(Number(window.readerEditorDocumentGeneration)||0))return;
 
     if(document.body.classList.contains('editing') &&
        typeof exitEditing==='function'){
@@ -2382,12 +2040,6 @@ async function restoreSession(){
     }
 
     window.readerEditorSessionDirty=!!record.dirty;
-    try{
-      const key=d.source==='github'
-        ? 'github:'+d.owner+'/'+d.repo+'/'+d.branch+'/'+d.path
-        : 'local:'+d.name;
-      localStorage.setItem('ccnaPage:'+key,String(Math.max(1,Number(record.page)||1)));
-    }catch(e){}
 
     if(typeof invalidateMetrics==='function')invalidateMetrics();
     if(typeof fitDiagrams==='function')fitDiagrams();
@@ -2395,16 +2047,14 @@ async function restoreSession(){
     await new Promise(resolve=>{
       requestAnimationFrame(()=>requestAnimationFrame(resolve));
     });
-    if(restoreGeneration!==(Number(window.readerEditorDocumentGeneration)||0))return;
 
     if(typeof recalcAfterContentChange==='function')recalcAfterContentChange();
 
     await new Promise(resolve=>setTimeout(resolve,220));
-    if(restoreGeneration!==(Number(window.readerEditorDocumentGeneration)||0))return;
 
     const target=Math.max(1,Math.min(
       typeof pageCount==='function'?pageCount():1,
-      Number(record.page)||persistedDocumentPage(d)
+      Number(record.page)||1
     ));
 
     if(typeof go==='function'){
@@ -2419,7 +2069,6 @@ async function restoreSession(){
       else status.textContent='Recovered session • '+(d.name||d.path||'document');
     }
 
-    if(window.readerEditorSyntax)window.readerEditorSyntax.rehighlightAfterLoad();
     lastSignature='';
   }catch(e){
     console.warn('ReaderEditor session restore failed:',e);
@@ -2465,7 +2114,7 @@ window.readerEditorPersistSession=()=>schedulePersist('open',20);
 
 async function init(){
   /*
-   * Wait until the existing initial pagination/page restoration has
+   * Wait until V9.3.8's existing initial pagination/page restoration has
    * completed. We do not alter that engine; we restore on top of it.
    */
   await new Promise(resolve=>setTimeout(resolve,420));
@@ -2477,12 +2126,6 @@ async function init(){
 }
 
 window.addEventListener('load',()=>setTimeout(init,20));
-
-// Normal reload: initial document is already in #pages; paint syntax after
-// the existing reader/session initialisation has had time to settle.
-window.addEventListener('load',()=>setTimeout(()=>{
-  if(window.readerEditorSyntax)window.readerEditorSyntax.rehighlightAfterLoad();
-},700));
 
 })();
 </script>
