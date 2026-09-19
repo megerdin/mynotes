@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title><script>const APP_VERSION='9.4.10';</script><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title><script>const APP_VERSION='9.4.11';</script><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -163,8 +163,12 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 
 </style>
 
-<link id="hljsLightTheme" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/styles/github.min.css">
-<link id="hljsDarkTheme" rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/styles/github-dark.min.css" disabled>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/styles/github.min.css" id="hljsLightTheme">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/styles/github-dark.min.css" id="hljsDarkTheme" disabled>
+<style id="v911-syntax">
+#pages pre.github-plain-text.hljs{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,"Liberation Mono","Noto Sans Mono",monospace;font-size:11px;line-height:1.32;white-space:pre-wrap;overflow-wrap:normal;word-break:normal;}
+#pages pre.github-plain-text.hljs{background:var(--code);color:var(--text);}
+</style>
 </head>
 <body>
 <!-- ReaderEditor GitHub: session persistence, GitHub/local files, HTML and plain-text support. -->
@@ -253,7 +257,6 @@ function recalcAfterContentChange(){
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
       invalidateMetrics();
       update(true);
-      if(typeof window.readerEditorSyntaxHighlight==='function') window.readerEditorSyntaxHighlight();
     }));
   };
   if(!imgs.length){ finish(); return; }
@@ -304,7 +307,6 @@ function update(force=false){
   // Persist the logical page whenever the page tracker confirms it. This
   // keeps local and GitHub documents on the same page-persistence path.
   if(typeof schedulePersist==='function') schedulePersist('page',20);
-  if(typeof window.readerEditorSyntaxHighlight==='function') window.readerEditorSyntaxHighlight();
 }
 function go(n){
   n=Math.max(1,Math.min(pageCount(),Number(n)||1));
@@ -400,7 +402,7 @@ searchInput.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault(
 document.getElementById('searchNext').onclick=()=>runSearch(1);
 document.getElementById('searchPrev').onclick=()=>runSearch(-1);
 searchInput.addEventListener('input',()=>{if(!searchInput.value.trim())clearSearch()});
-document.getElementById('themeBtn').onclick=()=>{const dark=document.documentElement.dataset.theme!=='dark';document.documentElement.dataset.theme=dark?'dark':'';localStorage.setItem('ccnaTheme',dark?'dark':'light');if(typeof window.readerEditorSyntaxHighlight==='function')window.readerEditorSyntaxHighlight()};
+document.getElementById('themeBtn').onclick=()=>{const dark=document.documentElement.dataset.theme!=='dark';document.documentElement.dataset.theme=dark?'dark':'';localStorage.setItem('ccnaTheme',dark?'dark':'light');if(typeof syncHighlightTheme==='function')syncHighlightTheme()};function syncHighlightTheme(){const dark=document.documentElement.dataset.theme==='dark';const a=document.getElementById('hljsLightTheme'),b=document.getElementById('hljsDarkTheme');if(a)a.disabled=dark;if(b)b.disabled=!dark;}syncHighlightTheme();;
 document.getElementById('fontMinus').onclick=()=>setFont(fontSize-1);document.getElementById('fontPlus').onclick=()=>setFont(fontSize+1);
 jump.addEventListener('change',()=>go(jump.value));jump.addEventListener('keydown',e=>{if(e.key==='Enter')go(jump.value)});
 if(localStorage.getItem('ccnaTheme')==='dark')document.documentElement.dataset.theme='dark';
@@ -2135,99 +2137,54 @@ window.addEventListener('load',()=>setTimeout(init,20));
 </script>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js"></script>
-<script id="v96-syntax-highlighting">
+<script id="v911-syntax-highlighting">
 (function(){
 'use strict';
-
-/* V9.4.10: simple raw-code highlighting only.
- * HTML Reader mode is deliberately excluded.
- * highlight.js is applied directly to the raw <pre> only while not editing.
+/* V9.4.11: isolated raw-code presentation only.
+ * No pagination, page tracking, session, Reader mode or Save logic is touched.
+ * HTML Reader mode is excluded. Plain/raw documents are highlighted once after
+ * the existing document/page restoration has settled. Edit mode removes the
+ * visual markup and restores the original text; leaving edit mode highlights it again.
  */
-let timer=0;
-let highlightedPre=null;
-let originalText='';
-let lastKey='';
-
-const EXTENSIONS={
-  js:'javascript',mjs:'javascript',cjs:'javascript',ts:'typescript',tsx:'typescript',
-  py:'python',pyw:'python',sh:'bash',bash:'bash',zsh:'bash',
-  html:'xml',htm:'xml',xhtml:'xml',xml:'xml',css:'css',scss:'scss',less:'less',
-  json:'json',json5:'json',yaml:'yaml',yml:'yaml',md:'markdown',markdown:'markdown',
-  sql:'sql',php:'php',java:'java',c:'c',h:'c',cpp:'cpp',cc:'cpp',cxx:'cpp',hpp:'cpp',
-  cs:'csharp',go:'go',rs:'rust',rb:'ruby',kt:'kotlin',swift:'swift',ps1:'powershell',
-  ini:'ini',conf:'ini',cfg:'ini',toml:'ini',properties:'properties',diff:'diff',patch:'diff'
-};
-
+const EXT={js:'javascript',mjs:'javascript',cjs:'javascript',ts:'typescript',tsx:'typescript',
+py:'python',pyw:'python',sh:'bash',bash:'bash',zsh:'bash',
+html:'xml',htm:'xml',xhtml:'xml',xml:'xml',css:'css',scss:'scss',less:'less',
+json:'json',json5:'json',yaml:'yaml',yml:'yaml',md:'markdown',markdown:'markdown',
+sql:'sql',php:'php',java:'java',c:'c',h:'c',cpp:'cpp',cc:'cpp',cxx:'cpp',hpp:'cpp',
+cs:'csharp',go:'go',rs:'rust',rb:'ruby',kt:'kotlin',swift:'swift',ps1:'powershell',
+ini:'ini',conf:'ini',cfg:'ini',toml:'ini',properties:'properties',diff:'diff',patch:'diff'};
+let active=null,sourceText='';
 function doc(){return window.githubDocument||window.localDocument||null;}
-function isRaw(){const d=doc();return !!d&&(!d.isHtml||d.htmlMode==='raw');}
-function name(){const d=doc();return String(d?.name||d?.path||'').split('/').pop().toLowerCase();}
-function language(){
-  const n=name();
-  if(n==='dockerfile')return 'dockerfile';
-  const i=n.lastIndexOf('.');
-  return i>0?EXTENSIONS[n.slice(i+1)]||null:null;
+function raw(){const d=doc();return !!d&&(!d.isHtml||d.htmlMode==='raw');}
+function fileName(){const d=doc();return String(d?.name||d?.path||'').split('/').pop().toLowerCase();}
+function language(){const n=fileName();if(n==='dockerfile')return 'dockerfile';const i=n.lastIndexOf('.');return i>0?EXT[n.slice(i+1)]||null:null;}
+function target(){return document.querySelector('#pages > pre.github-plain-text');}
+function restore(){if(!active)return;active.textContent=sourceText;active.classList.remove('hljs');Object.keys(EXT).forEach(()=>{});active=null;sourceText='';}
+function highlight(){
+  if(!raw()||document.body.classList.contains('editing')||!window.hljs){restore();return;}
+  const p=target();if(!p){restore();return;}
+  if(active===p&&p.classList.contains('hljs'))return;
+  restore();
+  const text=p.textContent||'';if(!text.trim())return;
+  const lang=language();
+  const result=lang&&hljs.getLanguage(lang)
+    ?hljs.highlight(text,{language:lang,ignoreIllegals:true})
+    :hljs.highlightAuto(text);
+  sourceText=text;
+  p.innerHTML=result.value;
+  p.classList.add('hljs');
+  active=p;
 }
-function pre(){return document.querySelector('#pages > pre.github-plain-text');}
-
-function restore(){
-  if(!highlightedPre)return;
-  highlightedPre.textContent=originalText;
-  highlightedPre=null;
-  originalText='';
-  lastKey='';
-}
-
-function apply(){
-  clearTimeout(timer);
-  timer=setTimeout(()=>{
-    try{
-      // HTML Reader mode is intentionally untouched.
-      if(!isRaw() || document.body.classList.contains('editing')){restore();return;}
-      const p=pre();
-      if(!p||!window.hljs){restore();return;}
-      const page=typeof currentPage==='function'?currentPage():1;
-      const key=[name(),page,p.textContent.length,document.documentElement.dataset.theme||'light'].join('|');
-      if(key===lastKey)return;
-      restore();
-      const text=p.textContent||'';
-      if(!text.trim())return;
-      const lang=language();
-      const result=lang&&hljs.getLanguage(lang)
-        ?hljs.highlight(text,{language:lang,ignoreIllegals:true})
-        :hljs.highlightAuto(text);
-      originalText=text;
-      p.innerHTML=result.value;
-      p.classList.add('hljs');
-      if(lang)p.classList.add('language-'+lang);
-      highlightedPre=p;
-      lastKey=key;
-    }catch(e){restore();}
-  },60);
-}
-
-function onEdit(){restore();setTimeout(apply,120);}
-
-const r=document.getElementById('reader');
-if(r){
-  r.addEventListener('scroll',apply,{passive:true});
-  if('onscrollend' in r)r.addEventListener('scrollend',apply,{passive:true});
-}
-
-new MutationObserver(()=>{
-  // Do not react to our own highlight.js DOM changes.
-  if(!highlightedPre)apply();
-}).observe(document.getElementById('pages'),{childList:true,subtree:true,characterData:true});
-
-new MutationObserver(()=>{restore();apply();})
-  .observe(document.body,{attributes:true,attributeFilter:['class']});
-
-window.addEventListener('resize',apply,{passive:true});
-window.addEventListener('load',()=>setTimeout(apply,700));
-
-// Existing editor calls this hook after leaving edit mode if available.
-window.readerEditorSyntaxHighlight=apply;
+function delayed(){setTimeout(highlight,80);}
+window.readerEditorSyntaxHighlight=highlight;
 window.readerEditorSyntaxRestore=restore;
-
+/* Initial call deliberately happens after V9.4.8's own page/session restoration. */
+window.addEventListener('load',()=>setTimeout(highlight,850));
+/* Edit mode is the only existing state change we observe. */
+new MutationObserver(()=>{
+  if(document.body.classList.contains('editing'))restore();
+  else if(!active)delayed();
+}).observe(document.body,{attributes:true,attributeFilter:['class']});
 })();
 </script>
 </body></html>
