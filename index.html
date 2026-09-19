@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title><script>const APP_VERSION='9.5.2';</script><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title><script>const APP_VERSION='9.5.3';</script><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -2315,19 +2315,59 @@ window.addEventListener('load',()=>setTimeout(init,20));
     return rects.some(x=>x.right>bounds.left+0.5 && x.left<bounds.right-0.5 && x.bottom>bounds.top && x.top<bounds.bottom);
   }
 
+  function pageLocalOffsets(host,map,bounds){
+    const total=map.length;
+    if(!total)return null;
+
+    // Find the first source offset whose prefix reaches the current visual page.
+    // This uses browser layout geometry, so it works with the existing CSS-column
+    // pagination without creating a second pagination system.
+    const prefixTouches=offset=>{
+      if(offset<=0)return false;
+      const range=rangeFromOffsets(host,map,0,offset);
+      return rangeTouchesPage(range,bounds);
+    };
+    if(!prefixTouches(total))return null;
+    let lo=1,hi=total;
+    while(lo<hi){
+      const mid=Math.floor((lo+hi)/2);
+      if(prefixTouches(mid))hi=mid; else lo=mid+1;
+    }
+    const start=lo-1;
+
+    // Find the last source offset still belonging to the current visual page.
+    const suffixTouches=offset=>{
+      if(offset>=total)return false;
+      const range=rangeFromOffsets(host,map,offset,total);
+      return rangeTouchesPage(range,bounds);
+    };
+    if(!suffixTouches(start))return {start,end:start};
+    lo=start;hi=total-1;
+    while(lo<hi){
+      const mid=Math.ceil((lo+hi)/2);
+      if(suffixTouches(mid))lo=mid; else hi=mid-1;
+    }
+    return {start,end:lo+1};
+  }
+
   function collectTokenRanges(host,language,hljs,bounds){
+    const map=sourceOffsetMap(host);
+    const local=pageLocalOffsets(host,map,bounds);
+    if(!local || local.end<=local.start)return [];
+    // IMPORTANT: only the current visual page is sent to Highlight.js.
+    // The rest of a large document is never tokenised here.
     const source=host.textContent||'';
-    if(!source)return [];
+    const pageSource=source.slice(local.start,local.end);
+    if(!pageSource)return [];
     let result;
     try{
-      if(language && hljs.getLanguage(language)) result=hljs.highlight(source,{language,ignoreIllegals:true});
-      else result=hljs.highlightAuto(source);
+      if(language && hljs.getLanguage(language)) result=hljs.highlight(pageSource,{language,ignoreIllegals:true});
+      else result=hljs.highlightAuto(pageSource);
     }catch(e){return []}
     const detached=document.createElement('div');
     detached.innerHTML=result.value;
-    const map=sourceOffsetMap(host);
     const ranges=[];
-    let cursor=0;
+    let cursor=local.start;
 
     function walk(node,activeScope){
       if(node.nodeType===Node.TEXT_NODE){
@@ -2404,12 +2444,12 @@ window.addEventListener('load',()=>setTimeout(init,20));
       if('onscrollend' in r)r.addEventListener('scrollend',()=>schedule(true,20),{passive:true});
     }
     document.addEventListener('input',e=>{
-      if(e.target.closest?.('#pages'))schedule(true,140);
+      if(e.target.closest?.('#pages'))schedule(true,350);
     },true);
     window.addEventListener('resize',()=>schedule(true,180));
     const p=document.getElementById('pages');
     if(p){
-      const observer=new MutationObserver(()=>schedule(true,180));
+      const observer=new MutationObserver(()=>schedule(true,350));
       observer.observe(p,{subtree:true,childList:true,characterData:true});
     }
     window.addEventListener('load',()=>schedule(true,650),{once:true});
