@@ -2136,332 +2136,110 @@ window.addEventListener('load',()=>setTimeout(init,20));
 <script id="v95-syntax-highlighter">
 (function(){
   'use strict';
-
   /*
-   * V9.5.0 — DOM-preserving syntax highlighting.
-   *
-   * This is intentionally a visual layer only. It never inserts token spans
-   * into the live editor/document DOM and therefore does not participate in
-   * saving, editing, pagination, or session serialization.
+   * V9.5.3 — performance correction.
+   * Syntax highlighting remains a visual-only layer. The important change is
+   * that Highlight.js tokenisation is cached by document text/language and is
+   * NOT repeated on every page change. Only ranges belonging to the current
+   * page are installed in CSS.highlights.
    */
   const CDN='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js';
   const STYLE_ID='v95-syntax-style';
-  const HIGHLIGHT_PREFIX='v95-';
-  let loadPromise=null, timer=0, generation=0, lastPage=0, lastTextSignature='';
-
-  const aliases={
-    'html':'xml','htm':'xml','xhtml':'xml','svg':'xml','xml':'xml',
-    'js':'javascript','mjs':'javascript','cjs':'javascript','jsx':'javascript',
-    'ts':'typescript','tsx':'typescript',
-    'py':'python','pyw':'python','rb':'ruby','rs':'rust','cs':'csharp',
-    'c++':'cpp','cc':'cpp','cxx':'cpp','h':'c','hpp':'cpp',
-    'sh':'bash','bash':'bash','zsh':'bash','ksh':'bash','shell':'shell',
-    'ps1':'powershell','psm1':'powershell','bat':'dos','cmd':'dos',
-    'yml':'yaml','yaml':'yaml','json':'json','jsonc':'json',
-    'md':'markdown','markdown':'markdown','sql':'sql','php':'php',
-    'java':'java','kt':'kotlin','go':'go','swift':'swift','dart':'dart',
-    'css':'css','scss':'scss','less':'less','vue':'xml','svelte':'xml',
-    'dockerfile':'dockerfile','conf':'ini','cfg':'ini','ini':'ini',
-    'properties':'properties','toml':'ini','makefile':'makefile','mk':'makefile',
-    'diff':'diff','patch':'diff','graphql':'graphql','gql':'graphql',
-    'r':'r','lua':'lua','pl':'perl','pm':'perl','ex':'elixir','exs':'elixir',
-    'fs':'fsharp','fsx':'fsharp','vb':'vbnet','vbs':'vbscript','asm':'x86asm'
-  };
+  const PREFIX='v95-';
+  const cache=new WeakMap();
+  let loadPromise=null,timer=0,generation=0,lastPage=0,lastKey='';
+  const aliases={html:'xml',htm:'xml',xhtml:'xml',svg:'xml',xml:'xml',js:'javascript',mjs:'javascript',cjs:'javascript',jsx:'javascript',ts:'typescript',tsx:'typescript',py:'python',pyw:'python',rb:'ruby',rs:'rust',cs:'csharp','c++':'cpp',cc:'cpp',cxx:'cpp',h:'c',hpp:'cpp',sh:'bash',bash:'bash',zsh:'bash',ksh:'bash',shell:'shell',ps1:'powershell',psm1:'powershell',bat:'dos',cmd:'dos',yml:'yaml',yaml:'yaml',json:'json',jsonc:'json',md:'markdown',markdown:'markdown',sql:'sql',php:'php',java:'java',kt:'kotlin',go:'go',swift:'swift',dart:'dart',css:'css',scss:'scss',less:'less',vue:'xml',svelte:'xml',dockerfile:'dockerfile',conf:'ini',cfg:'ini',ini:'ini',properties:'properties',toml:'ini',makefile:'makefile',mk:'makefile',diff:'diff',patch:'diff',graphql:'graphql',gql:'graphql',r:'r',lua:'lua',pl:'perl',pm:'perl',ex:'elixir',exs:'elixir',fs:'fsharp',fsx:'fsharp',vb:'vbnet',vbs:'vbscript',asm:'x86asm'};
 
   function addStyle(){
     if(document.getElementById(STYLE_ID))return;
-    const s=document.createElement('style');
-    s.id=STYLE_ID;
-    s.textContent=`
-      /* V9.5 syntax colours use CSS Custom Highlight API; source DOM stays untouched. */
-      ::highlight(v95-keyword){color:#c41d7f}
-      html[data-theme="dark"] ::highlight(v95-keyword){color:#ff85c0}
-      ::highlight(v95-built_in){color:#1677ff}
-      html[data-theme="dark"] ::highlight(v95-built_in){color:#69c0ff}
-      ::highlight(v95-type){color:#531dab}
-      html[data-theme="dark"] ::highlight(v95-type){color:#b37feb}
-      ::highlight(v95-title){color:#0958d9}
-      html[data-theme="dark"] ::highlight(v95-title){color:#85a5ff}
-      ::highlight(v95-title_function){color:#0958d9}
-      html[data-theme="dark"] ::highlight(v95-title_function){color:#85a5ff}
-      ::highlight(v95-title_class){color:#531dab}
-      html[data-theme="dark"] ::highlight(v95-title_class){color:#b37feb}
-      ::highlight(v95-string){color:#237804}
-      html[data-theme="dark"] ::highlight(v95-string){color:#95de64}
-      ::highlight(v95-number){color:#ad4e00}
-      html[data-theme="dark"] ::highlight(v95-number){color:#ffc069}
-      ::highlight(v95-comment){color:#8c8c8c;font-style:italic}
-      html[data-theme="dark"] ::highlight(v95-comment){color:#8c8c8c}
-      ::highlight(v95-meta){color:#d46b08}
-      html[data-theme="dark"] ::highlight(v95-meta){color:#ffc069}
-      ::highlight(v95-attr){color:#ad4e00}
-      html[data-theme="dark"] ::highlight(v95-attr){color:#ffc069}
-      ::highlight(v95-variable){color:#cf1322}
-      html[data-theme="dark"] ::highlight(v95-variable){color:#ff7875}
-      ::highlight(v95-literal){color:#c41d7f}
-      html[data-theme="dark"] ::highlight(v95-literal){color:#ff85c0}
-      ::highlight(v95-operator){color:#531dab}
-      html[data-theme="dark"] ::highlight(v95-operator){color:#b37feb}
-      [data-syntax-highlighted="1"]{--v95-syntax-active:1}
-    `;
+    const s=document.createElement('style');s.id=STYLE_ID;s.textContent=`
+      ::highlight(v95-keyword){color:#c41d7f} html[data-theme="dark"] ::highlight(v95-keyword){color:#ff85c0}
+      ::highlight(v95-built_in){color:#1677ff} html[data-theme="dark"] ::highlight(v95-built_in){color:#69c0ff}
+      ::highlight(v95-type){color:#531dab} html[data-theme="dark"] ::highlight(v95-type){color:#b37feb}
+      ::highlight(v95-title){color:#0958d9} html[data-theme="dark"] ::highlight(v95-title){color:#85a5ff}
+      ::highlight(v95-title_function){color:#0958d9} html[data-theme="dark"] ::highlight(v95-title_function){color:#85a5ff}
+      ::highlight(v95-title_class){color:#531dab} html[data-theme="dark"] ::highlight(v95-title_class){color:#b37feb}
+      ::highlight(v95-string){color:#237804} html[data-theme="dark"] ::highlight(v95-string){color:#95de64}
+      ::highlight(v95-number){color:#ad4e00} html[data-theme="dark"] ::highlight(v95-number){color:#ffc069}
+      ::highlight(v95-comment){color:#8c8c8c;font-style:italic} html[data-theme="dark"] ::highlight(v95-comment){color:#8c8c8c}
+      ::highlight(v95-meta){color:#d46b08} html[data-theme="dark"] ::highlight(v95-meta){color:#ffc069}
+      ::highlight(v95-attr){color:#ad4e00} html[data-theme="dark"] ::highlight(v95-attr){color:#ffc069}
+      ::highlight(v95-variable){color:#cf1322} html[data-theme="dark"] ::highlight(v95-variable){color:#ff7875}
+      ::highlight(v95-literal){color:#c41d7f} html[data-theme="dark"] ::highlight(v95-literal){color:#ff85c0}
+      ::highlight(v95-operator){color:#531dab} html[data-theme="dark"] ::highlight(v95-operator){color:#b37feb}`;
     document.head.appendChild(s);
   }
-
   function clearHighlights(){
-    if(!window.CSS || !CSS.highlights)return;
-    for(const name of Array.from(CSS.highlights.keys())){
-      if(name.indexOf(HIGHLIGHT_PREFIX)===0)CSS.highlights.delete(name);
-    }
-    document.querySelectorAll('[data-syntax-highlighted="1"]').forEach(el=>el.removeAttribute('data-syntax-highlighted'));
+    if(!window.CSS||!CSS.highlights)return;
+    for(const name of Array.from(CSS.highlights.keys()))if(name.indexOf(PREFIX)===0)CSS.highlights.delete(name);
   }
-
   function loadHljs(){
     if(window.hljs)return Promise.resolve(window.hljs);
     if(loadPromise)return loadPromise;
     loadPromise=new Promise((resolve,reject)=>{
       const existing=document.querySelector('script[data-v95-hljs]');
-      if(existing){
-        existing.addEventListener('load',()=>window.hljs?resolve(window.hljs):reject(new Error('highlight.js unavailable')),{once:true});
-        existing.addEventListener('error',()=>reject(new Error('highlight.js failed to load')),{once:true});
-        return;
-      }
-      const script=document.createElement('script');
-      script.src=CDN;
-      script.async=true;
-      script.dataset.v95Hljs='1';
-      script.onload=()=>window.hljs?resolve(window.hljs):reject(new Error('highlight.js unavailable'));
-      script.onerror=()=>reject(new Error('highlight.js failed to load'));
-      document.head.appendChild(script);
+      if(existing){existing.addEventListener('load',()=>window.hljs?resolve(window.hljs):reject(),{once:true});existing.addEventListener('error',reject,{once:true});return;}
+      const script=document.createElement('script');script.src=CDN;script.async=true;script.dataset.v95Hljs='1';script.onload=()=>window.hljs?resolve(window.hljs):reject();script.onerror=reject;document.head.appendChild(script);
     });
     return loadPromise;
   }
-
-  function documentName(){
-    const d=window.githubDocument||window.localDocument;
-    return String(d?.path||d?.name||'').toLowerCase();
-  }
-
+  function documentName(){const d=window.githubDocument||window.localDocument;return String(d?.path||d?.name||'').toLowerCase();}
   function languageForNode(el){
-    const explicit=(el.getAttribute('data-language')||el.getAttribute('data-lang')||'').toLowerCase().trim();
-    if(explicit)return aliases[explicit]||explicit;
-    const cls=String(el.className||'');
-    const m=cls.match(/(?:language|lang)-([a-z0-9_+-]+)/i);
-    if(m)return aliases[m[1].toLowerCase()]||m[1].toLowerCase();
-    const name=documentName();
-    const base=name.split('/').pop();
-    if(base==='dockerfile'||base==='containerfile')return 'dockerfile';
-    if(base==='makefile'||base==='gnumakefile')return 'makefile';
-    const ext=base.includes('.')?base.split('.').pop():'';
-    return aliases[ext]||'';
+    const explicit=(el.getAttribute('data-language')||el.getAttribute('data-lang')||'').toLowerCase().trim();if(explicit)return aliases[explicit]||explicit;
+    const m=String(el.className||'').match(/(?:language|lang)-([a-z0-9_+-]+)/i);if(m)return aliases[m[1].toLowerCase()]||m[1].toLowerCase();
+    const base=documentName().split('/').pop();if(base==='dockerfile'||base==='containerfile')return 'dockerfile';if(base==='makefile'||base==='gnumakefile')return 'makefile';
+    const ext=base.includes('.')?base.split('.').pop():'';return aliases[ext]||'';
   }
-
   function collectCodeHosts(){
-    const root=document.getElementById('pages');
-    if(!root)return [];
-    const out=[];
-    root.querySelectorAll('pre.github-plain-text,pre.code-block,pre:not(.ascii-diagram),pre code,code').forEach(el=>{
-      const host=el.tagName==='CODE' && el.parentElement?.tagName==='PRE' ? el.parentElement : el;
-      if(host===root || out.includes(host))return;
-      if(!host.textContent)return;
-      if(host.closest('#toolbar,#editPanel,#githubPanel'))return;
-      out.push(host);
-    });
-    return out;
+    const root=document.getElementById('pages');if(!root)return [];
+    const out=[];root.querySelectorAll('pre.github-plain-text,pre.code-block,pre:not(.ascii-diagram),pre code,code').forEach(el=>{const host=el.tagName==='CODE'&&el.parentElement?.tagName==='PRE'?el.parentElement:el;if(!host.textContent||out.includes(host)||host.closest('#toolbar,#editPanel,#githubPanel'))return;out.push(host);});return out;
   }
-
-  function textNodes(root){
-    const nodes=[];
-    const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.nodeValue?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT});
-    let n; while(n=w.nextNode())nodes.push(n);
-    return nodes;
+  function textNodes(root){const nodes=[],w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.nodeValue?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT});let n;while(n=w.nextNode())nodes.push(n);return nodes;}
+  function sourceMap(root){const nodes=textNodes(root),map=[];let offset=0;for(const node of nodes){map.push({node,start:offset,end:offset+node.nodeValue.length});offset+=node.nodeValue.length;}return {nodes:map,length:offset};}
+  function rangeFromOffsets(map,start,end){if(end<=start)return null;let a,b;for(const item of map.nodes){if(item.end<=start)continue;if(!a)a={node:item.node,offset:Math.max(0,start-item.start)};if(item.end>=end){b={node:item.node,offset:Math.min(item.node.nodeValue.length,end-item.start)};break;}}if(!a||!b)return null;const r=document.createRange();try{r.setStart(a.node,a.offset);r.setEnd(b.node,b.offset);return r;}catch(e){return null;}}
+  function bounds(){
+    const r=document.getElementById('reader');if(!r||typeof currentPage!=='function')return null;const page=Number(currentPage())||1;const m=typeof pageMetrics==='function'?pageMetrics():{columnWidth:r.clientWidth,columnGap:0,pitch:r.clientWidth,paddingLeft:0};const rr=r.getBoundingClientRect();const left=rr.left+(typeof pageStart==='function'?pageStart(page):(page-1)*m.pitch)-r.scrollLeft;return {page,left,right:left+m.columnWidth,top:rr.top,bottom:rr.bottom};
   }
+  function touches(r,b){const rects=r.getClientRects();for(const x of rects)if(x.right>b.left+.5&&x.left<b.right-.5&&x.bottom>b.top&&x.top<b.bottom)return true;return false;}
+  function signature(host){const t=host.textContent||'';return t.length+':'+t.slice(0,120)+':'+t.slice(-120);}
 
-  function sourceOffsetMap(root){
-    const nodes=textNodes(root), map=[], byNode=new Map();
-    let offset=0;
-    for(const node of nodes){
-      const start=offset, end=start+node.nodeValue.length;
-      const item={node,start,end}; map.push(item); byNode.set(node,item); offset=end;
-    }
-    return {nodes:map,length:offset};
-  }
-
-  function rangeFromOffsets(root,map,start,end){
-    if(end<=start)return null;
-    let a=null,b=null;
-    for(const item of map.nodes){
-      if(item.end<=start)continue;
-      if(!a){a={node:item.node,offset:Math.max(0,start-item.start)};}
-      if(item.end>=end){b={node:item.node,offset:Math.min(item.node.nodeValue.length,end-item.start)};break;}
-    }
-    if(!a||!b)return null;
-    const r=document.createRange();
-    try{r.setStart(a.node,a.offset);r.setEnd(b.node,b.offset);return r;}catch(e){return null;}
-  }
-
-  function pageBounds(){
-    const r=document.getElementById('reader');
-    if(!r || typeof currentPage!=='function')return null;
-    const page=Number(currentPage())||1;
-    const m=typeof pageMetrics==='function'?pageMetrics():{columnWidth:r.clientWidth,columnGap:0,pitch:r.clientWidth,paddingLeft:0};
-    const rect=r.getBoundingClientRect();
-    const left=rect.left+(typeof pageStart==='function'?pageStart(page):(page-1)*m.pitch)-r.scrollLeft;
-    return {page,left,right:left+m.columnWidth,top:rect.top,bottom:rect.bottom,pageWidth:m.columnWidth};
-  }
-
-  function rangeTouchesPage(range,bounds){
-    if(!range||!bounds)return false;
-    const rects=Array.from(range.getClientRects());
-    return rects.some(x=>x.right>bounds.left+0.5 && x.left<bounds.right-0.5 && x.bottom>bounds.top && x.top<bounds.bottom);
-  }
-
-  function pageLocalOffsets(host,map,bounds){
-    const total=map.length;
-    if(!total)return null;
-
-    // Find the first source offset whose prefix reaches the current visual page.
-    // This uses browser layout geometry, so it works with the existing CSS-column
-    // pagination without creating a second pagination system.
-    const prefixTouches=offset=>{
-      if(offset<=0)return false;
-      const range=rangeFromOffsets(host,map,0,offset);
-      return rangeTouchesPage(range,bounds);
-    };
-    if(!prefixTouches(total))return null;
-    let lo=1,hi=total;
-    while(lo<hi){
-      const mid=Math.floor((lo+hi)/2);
-      if(prefixTouches(mid))hi=mid; else lo=mid+1;
-    }
-    const start=lo-1;
-
-    // Find the last source offset still belonging to the current visual page.
-    const suffixTouches=offset=>{
-      if(offset>=total)return false;
-      const range=rangeFromOffsets(host,map,offset,total);
-      return rangeTouchesPage(range,bounds);
-    };
-    if(!suffixTouches(start))return {start,end:start};
-    lo=start;hi=total-1;
-    while(lo<hi){
-      const mid=Math.ceil((lo+hi)/2);
-      if(suffixTouches(mid))lo=mid; else hi=mid-1;
-    }
-    return {start,end:lo+1};
-  }
-
-  function collectTokenRanges(host,language,hljs,bounds){
-    const map=sourceOffsetMap(host);
-    const local=pageLocalOffsets(host,map,bounds);
-    if(!local || local.end<=local.start)return [];
-    // IMPORTANT: only the current visual page is sent to Highlight.js.
-    // The rest of a large document is never tokenised here.
-    const source=host.textContent||'';
-    const pageSource=source.slice(local.start,local.end);
-    if(!pageSource)return [];
-    let result;
-    try{
-      if(language && hljs.getLanguage(language)) result=hljs.highlight(pageSource,{language,ignoreIllegals:true});
-      else result=hljs.highlightAuto(pageSource);
-    }catch(e){return []}
-    const detached=document.createElement('div');
-    detached.innerHTML=result.value;
-    const ranges=[];
-    let cursor=local.start;
-
-    function walk(node,activeScope){
-      if(node.nodeType===Node.TEXT_NODE){
-        const len=node.nodeValue.length;
-        if(activeScope && len){
-          const start=cursor,end=cursor+len;
-          const range=rangeFromOffsets(host,map,start,end);
-          if(range && rangeTouchesPage(range,bounds))ranges.push({scope:activeScope,range});
-        }
-        cursor+=len;
-        return;
-      }
-      if(node.nodeType!==Node.ELEMENT_NODE)return;
-      const classes=String(node.className||'').split(/\s+/).filter(Boolean);
-      const scope=classes.find(c=>c.startsWith('hljs-'))?.slice(5)||activeScope;
-      for(const child of node.childNodes)walk(child,scope);
+  function tokenise(host,language,hljs){
+    const source=host.textContent||'';if(!source)return {map:sourceMap(host),tokens:[]};
+    const key=language+'|'+signature(host);const old=cache.get(host);if(old&&old.key===key&&old.length===source.length)return old;
+    let result;try{result=language&&hljs.getLanguage(language)?hljs.highlight(source,{language,ignoreIllegals:true}):hljs.highlightAuto(source);}catch(e){return {key,length:source.length,map:sourceMap(host),tokens:[]};}
+    const detached=document.createElement('div');detached.innerHTML=result.value;const map=sourceMap(host);const tokens=[];let cursor=0;
+    function walk(node,scope){
+      if(node.nodeType===Node.TEXT_NODE){const len=node.nodeValue.length;if(scope&&len)tokens.push({scope,start:cursor,end:cursor+len});cursor+=len;return;}
+      if(node.nodeType!==Node.ELEMENT_NODE)return;const classes=String(node.className||'').split(/\s+/).filter(Boolean);const next=classes.find(c=>c.startsWith('hljs-'))?.slice(5)||scope;for(const child of node.childNodes)walk(child,next);
     }
     for(const child of detached.childNodes)walk(child,'');
-    return ranges;
+    const item={key,length:source.length,map,tokens};cache.set(host,item);return item;
   }
-
-  function applyRanges(items){
-    if(!window.CSS || !CSS.highlights)return false;
+  function applyCurrent(host,tokenData,b){
     const grouped=new Map();
-    for(const item of items){
-      const name=HIGHLIGHT_PREFIX+item.scope.replace(/[^a-z0-9_-]/gi,'-');
-      if(!grouped.has(name))grouped.set(name,new Highlight());
-      grouped.get(name).add(item.range);
+    for(const token of tokenData.tokens){
+      /* Cheap offset filtering is useful after a page has been visited once;
+         geometry is still checked only for candidate token ranges. */
+      const range=rangeFromOffsets(tokenData.map,token.start,token.end);if(!range||!touches(range,b))continue;
+      const name=PREFIX+token.scope.replace(/[^a-z0-9_-]/gi,'-');if(!grouped.has(name))grouped.set(name,new Highlight());grouped.get(name).add(range);
     }
-    for(const [name,highlight] of grouped)CSS.highlights.set(name,highlight);
-    return true;
+    for(const [name,h] of grouped)CSS.highlights.set(name,h);
   }
-
-  function signature(host){
-    const t=host.textContent||'';
-    return t.length+':'+t.slice(0,80)+':'+t.slice(-80);
-  }
-
   async function highlightCurrentPage(force){
-    const my=++generation;
+    const my=++generation;if(!window.CSS||!CSS.highlights)return;const b=bounds();if(!b)return;const hosts=collectCodeHosts();if(!hosts.length)return;const hljs=await loadHljs().catch(()=>null);if(my!==generation||!hljs)return;
     clearHighlights();
-    if(!window.CSS || !CSS.highlights)return;
-    const bounds=pageBounds();
-    if(!bounds)return;
-    const hosts=collectCodeHosts();
-    if(!hosts.length)return;
-    const hljs=await loadHljs().catch(()=>null);
-    if(my!==generation || !hljs)return;
-
-    const items=[];
-    for(const host of hosts){
-      const sig=signature(host);
-      if(!force && sig===lastTextSignature && lastPage===bounds.page)continue;
-      const lang=languageForNode(host);
-      items.push(...collectTokenRanges(host,lang,hljs,bounds));
-      host.setAttribute('data-syntax-highlighted','1');
-    }
-    if(my!==generation)return;
-    applyRanges(items);
-    lastPage=bounds.page;
-    lastTextSignature=hosts.map(signature).join('|');
+    const key=b.page+'|'+hosts.map(signature).join('|');if(!force&&key===lastKey)return;
+    for(const host of hosts){const data=tokenise(host,languageForNode(host),hljs);if(my!==generation)return;applyCurrent(host,data,b);}
+    lastPage=b.page;lastKey=key;
   }
-
-  function schedule(force=false,delay=60){
-    clearTimeout(timer);
-    timer=setTimeout(()=>highlightCurrentPage(force),delay);
-  }
-
+  function schedule(force=false,delay=80){clearTimeout(timer);timer=setTimeout(()=>highlightCurrentPage(force),delay);}
   function install(){
-    addStyle();
-    const r=document.getElementById('reader');
-    if(r){
-      r.addEventListener('scroll',()=>schedule(false,80),{passive:true});
-      if('onscrollend' in r)r.addEventListener('scrollend',()=>schedule(true,20),{passive:true});
-    }
-    document.addEventListener('input',e=>{
-      if(e.target.closest?.('#pages'))schedule(true,350);
-    },true);
-    window.addEventListener('resize',()=>schedule(true,180));
-    const p=document.getElementById('pages');
-    if(p){
-      const observer=new MutationObserver(()=>schedule(true,350));
-      observer.observe(p,{subtree:true,childList:true,characterData:true});
-    }
-    window.addEventListener('load',()=>schedule(true,650),{once:true});
-    // V9.4.8 may already have completed its load event before this module is evaluated.
-    setTimeout(()=>schedule(true,650),700);
+    addStyle();const r=document.getElementById('reader');if(r){r.addEventListener('scroll',()=>schedule(false,120),{passive:true});if('onscrollend' in r)r.addEventListener('scrollend',()=>schedule(true,30),{passive:true});}
+    document.addEventListener('input',e=>{if(e.target.closest?.('#pages'))schedule(true,180);},true);window.addEventListener('resize',()=>schedule(true,220));
+    const p=document.getElementById('pages');if(p){const observer=new MutationObserver(()=>schedule(true,220));observer.observe(p,{subtree:true,childList:true,characterData:true});}
+    window.addEventListener('load',()=>schedule(true,700),{once:true});setTimeout(()=>schedule(true,700),750);
   }
-
-  window.readerEditorSyntaxHighlight={
-    refresh:()=>schedule(true,20),
-    clear:()=>{generation++;clearTimeout(timer);clearHighlights();lastPage=0;lastTextSignature='';}
-  };
-
+  window.readerEditorSyntaxHighlight={refresh:()=>{lastKey='';schedule(true,20);},clear:()=>{generation++;clearTimeout(timer);clearHighlights();lastPage=0;lastKey='';}};
   install();
 })();
 </script>
