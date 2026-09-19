@@ -298,8 +298,9 @@ function update(force=false){
   // returns to exactly the page the user was reading.
   const hash=`#page=${p}`;
   if(location.hash!==hash) history.replaceState(null,'',location.pathname+location.search+hash);
-  // Persist the logical page whenever the page tracker confirms it. This
-  // keeps local and GitHub documents on the same page-persistence path.
+  // Keep the established page-persistence hook in the central page tracker.
+  // This covers every path that confirms a page, while persistPage() stores
+  // only the small page-state record rather than serializing the document.
   if(typeof schedulePersist==='function') schedulePersist('page',20);
 }
 function go(n){
@@ -1742,13 +1743,15 @@ loadConfig();
  */
 
 const DB_NAME='ReaderEditorSessionV94';
-const DB_VERSION=1;
+const DB_VERSION=2;
 const STORE='session';
+const PAGE_STORE='page';
 const SESSION_KEY='active';
 let dbPromise=null;
 let sessionReady=false;
 let restoreInProgress=false;
 let persistTimer=0;
+let pagePersistTimer=0;
 let lastSignature='';
 
 function openSessionDB(){
@@ -1759,6 +1762,7 @@ function openSessionDB(){
     req.onupgradeneeded=()=>{
       const db=req.result;
       if(!db.objectStoreNames.contains(STORE))db.createObjectStore(STORE);
+      if(!db.objectStoreNames.contains(PAGE_STORE))db.createObjectStore(PAGE_STORE);
     };
     req.onsuccess=()=>resolve(req.result);
     req.onerror=()=>reject(req.error||new Error('IndexedDB open failed'));
@@ -1790,12 +1794,33 @@ async function dbClear(){
   try{
     const db=await openSessionDB();
     await new Promise((resolve,reject)=>{
-      const tx=db.transaction(STORE,'readwrite');
+      const tx=db.transaction([STORE,PAGE_STORE],'readwrite');
       tx.objectStore(STORE).delete(SESSION_KEY);
+      tx.objectStore(PAGE_STORE).delete(SESSION_KEY);
       tx.oncomplete=()=>resolve();
       tx.onerror=()=>reject(tx.error);
     });
   }catch(e){}
+}
+
+async function dbGetPage(){
+  const db=await openSessionDB();
+  return await new Promise((resolve,reject)=>{
+    const tx=db.transaction(PAGE_STORE,'readonly');
+    const req=tx.objectStore(PAGE_STORE).get(SESSION_KEY);
+    req.onsuccess=()=>resolve(req.result||null);
+    req.onerror=()=>reject(req.error);
+  });
+}
+
+async function dbPutPage(value){
+  const db=await openSessionDB();
+  return await new Promise((resolve,reject)=>{
+    const tx=db.transaction(PAGE_STORE,'readwrite');
+    tx.objectStore(PAGE_STORE).put(value,SESSION_KEY);
+    tx.oncomplete=()=>resolve();
+    tx.onerror=()=>reject(tx.error);
+  });
 }
 
 function documentDescriptor(){
@@ -1880,6 +1905,27 @@ function currentPageNumber(){
   return 1;
 }
 
+function documentKey(d){
+  if(!d)return '';
+  return [d.source||'',d.owner||'',d.repo||'',d.branch||'',d.path||'',d.sha||'',d.name||''].join('|');
+}
+
+async function persistPage(){
+  if(!sessionReady || restoreInProgress || (!window.githubDocument && !window.localDocument))return;
+  const d=documentDescriptor();
+  if(!d)return;
+  const page=currentPageNumber();
+  const value={
+    version:1,
+    savedAt:Date.now(),
+    key:documentKey(d),
+    page:Math.max(1,Number(page)||1),
+    editing:document.body.classList.contains('editing'),
+    dirty:!!window.readerEditorSessionDirty
+  };
+  try{await dbPutPage(value);}catch(e){}
+}
+
 async function persistSession(reason){
   if(!sessionReady || restoreInProgress || (!window.githubDocument && !window.localDocument))return;
   const d=documentDescriptor();
@@ -1902,8 +1948,9 @@ async function persistSession(reason){
     dirty:!!window.readerEditorSessionDirty
   };
 
-  // Use a content hash, not content.length: two different edits can have
-  // exactly the same length and must still be persisted.
+  // Content hashing is performed only when content is actually persisted.
+  // Page tracking no longer calls this function, so scrolling never clones,
+  // serializes, or hashes the full document.
   let contentHash=0x811c9dc5;
   for(let i=0;i<content.length;i++){
     contentHash^=content.charCodeAt(i);
@@ -1911,20 +1958,30 @@ async function persistSession(reason){
   }
   const signature=[
     d.source,d.owner,d.repo,d.branch,d.path,d.sha,d.isHtml,d.htmlMode,
-    record.page,record.editing,record.dirty,contentHash>>>0
+    record.editing,record.dirty,contentHash>>>0
   ].join('|');
 
-  // Avoid repeatedly writing identical state during scroll/layout events.
-  if(signature===lastSignature)return;
+  if(signature===lastSignature){
+    await persistPage();
+    return;
+  }
   lastSignature=signature;
 
-  try{await dbPut(record);}catch(e){}
+  try{
+    await dbPut(record);
+    await persistPage();
+  }catch(e){}
 }
 
-function schedulePersist(reason,delay=180){
+function schedulePersist(reason,delay=1200){
   if(!sessionReady || restoreInProgress)return;
+  if(reason==='page'){
+    clearTimeout(pagePersistTimer);
+    pagePersistTimer=setTimeout(()=>persistPage(),Math.max(120,delay));
+    return;
+  }
   clearTimeout(persistTimer);
-  persistTimer=setTimeout(()=>persistSession(reason),delay);
+  persistTimer=setTimeout(()=>persistSession(reason),Math.max(300,delay));
 }
 
 function installSaveHooks(){
@@ -1954,10 +2011,12 @@ function installSaveHooks(){
 }
 
 async function restoreSession(){
-  let record=null;
-  try{record=await dbGet();}catch(e){return;}
+  let record=null,pageState=null;
+  try{record=await dbGet();pageState=await dbGetPage();}catch(e){return;}
 
   if(!record || !record.document || typeof record.content!=='string')return;
+  const restoredKey=documentKey(record.document);
+  if(!pageState || pageState.key!==restoredKey)pageState=null;
 
   restoreInProgress=true;
 
@@ -2056,7 +2115,7 @@ async function restoreSession(){
 
     const target=Math.max(1,Math.min(
       typeof pageCount==='function'?pageCount():1,
-      Number(record.page)||1
+      Number(pageState?.page||record.page)||1
     ));
 
     if(typeof go==='function'){
@@ -2067,7 +2126,7 @@ async function restoreSession(){
 
     const status=document.getElementById('editStatus');
     if(status){
-      if(record.dirty)status.textContent='Recovered session • Unsaved changes';
+      if(record.dirty || pageState?.dirty)status.textContent='Recovered session • Unsaved changes';
       else status.textContent='Recovered session • '+(d.name||d.path||'document');
     }
 
@@ -2083,19 +2142,22 @@ function installObservers(){
   document.addEventListener('input',()=>{
     if(document.body.classList.contains('editing')){
       window.readerEditorSessionDirty=true;
-      schedulePersist('edit',120);
+      schedulePersist('edit',1200);
     }
   },true);
 
   document.addEventListener('click',e=>{
-    if(e.target.closest('#editBtn'))schedulePersist('edit-mode',80);
+    if(e.target.closest('#editBtn'))schedulePersist('edit-mode',1200);
   },true);
 
   const r=document.getElementById('reader');
   if(r){
-    r.addEventListener('scroll',()=>schedulePersist('page',220),{passive:true});
+    // Page persistence is intentionally isolated from content persistence.
+    // Scrolling now writes only a tiny page-state record and never touches
+    // the full document content.
+    r.addEventListener('scroll',()=>schedulePersist('page',500),{passive:true});
     if('onscrollend' in r){
-      r.addEventListener('scrollend',()=>schedulePersist('page',20),{passive:true});
+      r.addEventListener('scrollend',()=>schedulePersist('page',120),{passive:true});
     }
   }
 
@@ -2103,7 +2165,7 @@ function installObservers(){
   if(p){
     const observer=new MutationObserver(()=>{
       if(!restoreInProgress && (window.githubDocument || window.localDocument) && document.body.classList.contains('editing')){
-        schedulePersist('content',180);
+        schedulePersist('content',1200);
       }
     });
     observer.observe(p,{subtree:true,childList:true,characterData:true,attributes:true});
@@ -2112,7 +2174,7 @@ function installObservers(){
 
 // Allow the existing GitHub open path to persist a newly opened file
 // immediately, without changing its loading or pagination logic.
-window.readerEditorPersistSession=()=>schedulePersist('open',20);
+window.readerEditorPersistSession=()=>schedulePersist('open',120);
 
 async function init(){
   /*
@@ -2124,7 +2186,7 @@ async function init(){
   await restoreSession();
   sessionReady=true;
   installObservers();
-  schedulePersist('ready',80);
+  schedulePersist('ready',120);
 }
 
 window.addEventListener('load',()=>setTimeout(init,20));
@@ -2136,111 +2198,9 @@ window.addEventListener('load',()=>setTimeout(init,20));
 <script id="v95-syntax-highlighter">
 (function(){
   'use strict';
-  /*
-   * V9.5.3 — performance correction.
-   * Syntax highlighting remains a visual-only layer. The important change is
-   * that Highlight.js tokenisation is cached by document text/language and is
-   * NOT repeated on every page change. Only ranges belonging to the current
-   * page are installed in CSS.highlights.
-   */
-  const CDN='https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.12.0/highlight.min.js';
-  const STYLE_ID='v95-syntax-style';
-  const PREFIX='v95-';
-  const cache=new WeakMap();
-  let loadPromise=null,timer=0,generation=0,lastPage=0,lastKey='';
-  const aliases={html:'xml',htm:'xml',xhtml:'xml',svg:'xml',xml:'xml',js:'javascript',mjs:'javascript',cjs:'javascript',jsx:'javascript',ts:'typescript',tsx:'typescript',py:'python',pyw:'python',rb:'ruby',rs:'rust',cs:'csharp','c++':'cpp',cc:'cpp',cxx:'cpp',h:'c',hpp:'cpp',sh:'bash',bash:'bash',zsh:'bash',ksh:'bash',shell:'shell',ps1:'powershell',psm1:'powershell',bat:'dos',cmd:'dos',yml:'yaml',yaml:'yaml',json:'json',jsonc:'json',md:'markdown',markdown:'markdown',sql:'sql',php:'php',java:'java',kt:'kotlin',go:'go',swift:'swift',dart:'dart',css:'css',scss:'scss',less:'less',vue:'xml',svelte:'xml',dockerfile:'dockerfile',conf:'ini',cfg:'ini',ini:'ini',properties:'properties',toml:'ini',makefile:'makefile',mk:'makefile',diff:'diff',patch:'diff',graphql:'graphql',gql:'graphql',r:'r',lua:'lua',pl:'perl',pm:'perl',ex:'elixir',exs:'elixir',fs:'fsharp',fsx:'fsharp',vb:'vbnet',vbs:'vbscript',asm:'x86asm'};
-
-  function addStyle(){
-    if(document.getElementById(STYLE_ID))return;
-    const s=document.createElement('style');s.id=STYLE_ID;s.textContent=`
-      ::highlight(v95-keyword){color:#c41d7f} html[data-theme="dark"] ::highlight(v95-keyword){color:#ff85c0}
-      ::highlight(v95-built_in){color:#1677ff} html[data-theme="dark"] ::highlight(v95-built_in){color:#69c0ff}
-      ::highlight(v95-type){color:#531dab} html[data-theme="dark"] ::highlight(v95-type){color:#b37feb}
-      ::highlight(v95-title){color:#0958d9} html[data-theme="dark"] ::highlight(v95-title){color:#85a5ff}
-      ::highlight(v95-title_function){color:#0958d9} html[data-theme="dark"] ::highlight(v95-title_function){color:#85a5ff}
-      ::highlight(v95-title_class){color:#531dab} html[data-theme="dark"] ::highlight(v95-title_class){color:#b37feb}
-      ::highlight(v95-string){color:#237804} html[data-theme="dark"] ::highlight(v95-string){color:#95de64}
-      ::highlight(v95-number){color:#ad4e00} html[data-theme="dark"] ::highlight(v95-number){color:#ffc069}
-      ::highlight(v95-comment){color:#8c8c8c;font-style:italic} html[data-theme="dark"] ::highlight(v95-comment){color:#8c8c8c}
-      ::highlight(v95-meta){color:#d46b08} html[data-theme="dark"] ::highlight(v95-meta){color:#ffc069}
-      ::highlight(v95-attr){color:#ad4e00} html[data-theme="dark"] ::highlight(v95-attr){color:#ffc069}
-      ::highlight(v95-variable){color:#cf1322} html[data-theme="dark"] ::highlight(v95-variable){color:#ff7875}
-      ::highlight(v95-literal){color:#c41d7f} html[data-theme="dark"] ::highlight(v95-literal){color:#ff85c0}
-      ::highlight(v95-operator){color:#531dab} html[data-theme="dark"] ::highlight(v95-operator){color:#b37feb}`;
-    document.head.appendChild(s);
-  }
-  function clearHighlights(){
-    if(!window.CSS||!CSS.highlights)return;
-    for(const name of Array.from(CSS.highlights.keys()))if(name.indexOf(PREFIX)===0)CSS.highlights.delete(name);
-  }
-  function loadHljs(){
-    if(window.hljs)return Promise.resolve(window.hljs);
-    if(loadPromise)return loadPromise;
-    loadPromise=new Promise((resolve,reject)=>{
-      const existing=document.querySelector('script[data-v95-hljs]');
-      if(existing){existing.addEventListener('load',()=>window.hljs?resolve(window.hljs):reject(),{once:true});existing.addEventListener('error',reject,{once:true});return;}
-      const script=document.createElement('script');script.src=CDN;script.async=true;script.dataset.v95Hljs='1';script.onload=()=>window.hljs?resolve(window.hljs):reject();script.onerror=reject;document.head.appendChild(script);
-    });
-    return loadPromise;
-  }
-  function documentName(){const d=window.githubDocument||window.localDocument;return String(d?.path||d?.name||'').toLowerCase();}
-  function languageForNode(el){
-    const explicit=(el.getAttribute('data-language')||el.getAttribute('data-lang')||'').toLowerCase().trim();if(explicit)return aliases[explicit]||explicit;
-    const m=String(el.className||'').match(/(?:language|lang)-([a-z0-9_+-]+)/i);if(m)return aliases[m[1].toLowerCase()]||m[1].toLowerCase();
-    const base=documentName().split('/').pop();if(base==='dockerfile'||base==='containerfile')return 'dockerfile';if(base==='makefile'||base==='gnumakefile')return 'makefile';
-    const ext=base.includes('.')?base.split('.').pop():'';return aliases[ext]||'';
-  }
-  function collectCodeHosts(){
-    const root=document.getElementById('pages');if(!root)return [];
-    const out=[];root.querySelectorAll('pre.github-plain-text,pre.code-block,pre:not(.ascii-diagram),pre code,code').forEach(el=>{const host=el.tagName==='CODE'&&el.parentElement?.tagName==='PRE'?el.parentElement:el;if(!host.textContent||out.includes(host)||host.closest('#toolbar,#editPanel,#githubPanel'))return;out.push(host);});return out;
-  }
-  function textNodes(root){const nodes=[],w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>n.nodeValue?NodeFilter.FILTER_ACCEPT:NodeFilter.FILTER_REJECT});let n;while(n=w.nextNode())nodes.push(n);return nodes;}
-  function sourceMap(root){const nodes=textNodes(root),map=[];let offset=0;for(const node of nodes){map.push({node,start:offset,end:offset+node.nodeValue.length});offset+=node.nodeValue.length;}return {nodes:map,length:offset};}
-  function rangeFromOffsets(map,start,end){if(end<=start)return null;let a,b;for(const item of map.nodes){if(item.end<=start)continue;if(!a)a={node:item.node,offset:Math.max(0,start-item.start)};if(item.end>=end){b={node:item.node,offset:Math.min(item.node.nodeValue.length,end-item.start)};break;}}if(!a||!b)return null;const r=document.createRange();try{r.setStart(a.node,a.offset);r.setEnd(b.node,b.offset);return r;}catch(e){return null;}}
-  function bounds(){
-    const r=document.getElementById('reader');if(!r||typeof currentPage!=='function')return null;const page=Number(currentPage())||1;const m=typeof pageMetrics==='function'?pageMetrics():{columnWidth:r.clientWidth,columnGap:0,pitch:r.clientWidth,paddingLeft:0};const rr=r.getBoundingClientRect();const left=rr.left+(typeof pageStart==='function'?pageStart(page):(page-1)*m.pitch)-r.scrollLeft;return {page,left,right:left+m.columnWidth,top:rr.top,bottom:rr.bottom};
-  }
-  function touches(r,b){const rects=r.getClientRects();for(const x of rects)if(x.right>b.left+.5&&x.left<b.right-.5&&x.bottom>b.top&&x.top<b.bottom)return true;return false;}
-  function signature(host){const t=host.textContent||'';return t.length+':'+t.slice(0,120)+':'+t.slice(-120);}
-
-  function tokenise(host,language,hljs){
-    const source=host.textContent||'';if(!source)return {map:sourceMap(host),tokens:[]};
-    const key=language+'|'+signature(host);const old=cache.get(host);if(old&&old.key===key&&old.length===source.length)return old;
-    let result;try{result=language&&hljs.getLanguage(language)?hljs.highlight(source,{language,ignoreIllegals:true}):hljs.highlightAuto(source);}catch(e){return {key,length:source.length,map:sourceMap(host),tokens:[]};}
-    const detached=document.createElement('div');detached.innerHTML=result.value;const map=sourceMap(host);const tokens=[];let cursor=0;
-    function walk(node,scope){
-      if(node.nodeType===Node.TEXT_NODE){const len=node.nodeValue.length;if(scope&&len)tokens.push({scope,start:cursor,end:cursor+len});cursor+=len;return;}
-      if(node.nodeType!==Node.ELEMENT_NODE)return;const classes=String(node.className||'').split(/\s+/).filter(Boolean);const next=classes.find(c=>c.startsWith('hljs-'))?.slice(5)||scope;for(const child of node.childNodes)walk(child,next);
-    }
-    for(const child of detached.childNodes)walk(child,'');
-    const item={key,length:source.length,map,tokens};cache.set(host,item);return item;
-  }
-  function applyCurrent(host,tokenData,b){
-    const grouped=new Map();
-    for(const token of tokenData.tokens){
-      /* Cheap offset filtering is useful after a page has been visited once;
-         geometry is still checked only for candidate token ranges. */
-      const range=rangeFromOffsets(tokenData.map,token.start,token.end);if(!range||!touches(range,b))continue;
-      const name=PREFIX+token.scope.replace(/[^a-z0-9_-]/gi,'-');if(!grouped.has(name))grouped.set(name,new Highlight());grouped.get(name).add(range);
-    }
-    for(const [name,h] of grouped)CSS.highlights.set(name,h);
-  }
-  async function highlightCurrentPage(force){
-    const my=++generation;if(!window.CSS||!CSS.highlights)return;const b=bounds();if(!b)return;const hosts=collectCodeHosts();if(!hosts.length)return;const hljs=await loadHljs().catch(()=>null);if(my!==generation||!hljs)return;
-    clearHighlights();
-    const key=b.page+'|'+hosts.map(signature).join('|');if(!force&&key===lastKey)return;
-    for(const host of hosts){const data=tokenise(host,languageForNode(host),hljs);if(my!==generation)return;applyCurrent(host,data,b);}
-    lastPage=b.page;lastKey=key;
-  }
-  function schedule(force=false,delay=80){clearTimeout(timer);timer=setTimeout(()=>highlightCurrentPage(force),delay);}
-  function install(){
-    addStyle();const r=document.getElementById('reader');if(r){r.addEventListener('scroll',()=>schedule(false,120),{passive:true});if('onscrollend' in r)r.addEventListener('scrollend',()=>schedule(true,30),{passive:true});}
-    document.addEventListener('input',e=>{if(e.target.closest?.('#pages'))schedule(true,180);},true);window.addEventListener('resize',()=>schedule(true,220));
-    const p=document.getElementById('pages');if(p){const observer=new MutationObserver(()=>schedule(true,220));observer.observe(p,{subtree:true,childList:true,characterData:true});}
-    window.addEventListener('load',()=>schedule(true,700),{once:true});setTimeout(()=>schedule(true,700),750);
-  }
-  window.readerEditorSyntaxHighlight={refresh:()=>{lastKey='';schedule(true,20);},clear:()=>{generation++;clearTimeout(timer);clearHighlights();lastPage=0;lastKey='';}};
-  install();
+  /* V9.6.0 performance test: syntax highlighting is disabled temporarily.
+     V9.5.3 remains the rollback/reference version with the full highlighter. */
+  window.readerEditorSyntaxHighlight={refresh:function(){},clear:function(){}};
 })();
 </script>
 
