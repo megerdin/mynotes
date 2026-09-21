@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title><script>const APP_VERSION='9.4.20';</script><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title><script>const APP_VERSION='9.4.21';</script><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -116,6 +116,13 @@ pre.ascii-diagram {
 }
 </style><style id="editorStyles">
 #editBtn{font-weight:700}
+#fileMenu{position:relative;display:inline-block}
+#fileMenuBtn{font-weight:700}
+#fileMenuList{display:none;position:absolute;top:calc(100% + 5px);left:0;z-index:60;min-width:150px;padding:5px;background:var(--toolbar);border:1px solid var(--border);border-radius:9px;box-shadow:var(--shadow);backdrop-filter:blur(8px)}
+#fileMenu.open #fileMenuList{display:flex;flex-direction:column;gap:3px}
+#fileMenuList button,#fileMenuList .file-menu-version{display:block;width:100%;box-sizing:border-box;text-align:left;border:1px solid transparent;border-radius:7px;padding:8px 10px;background:transparent;color:var(--text);font:inherit;cursor:pointer;white-space:nowrap}
+#fileMenuList button:hover{background:var(--code);border-color:var(--border)}
+#fileMenuList .file-menu-version{color:var(--muted);cursor:default;border-top:1px solid var(--border);border-radius:0;margin-top:2px;padding-top:8px}
 #editPanel{display:none;position:fixed;z-index:30;left:50%;transform:translateX(-50%);top:58px;background:var(--toolbar);border:1px solid var(--border);border-radius:10px;padding:6px;box-shadow:var(--shadow);gap:4px;align-items:center;backdrop-filter:blur(8px)}
 body.editing #editPanel{display:flex}
 body.editing #pages>*:not(.ccna-index) h2,body.editing #pages>*:not(.ccna-index) h3,body.editing #pages>*:not(.ccna-index) p,body.editing #pages>*:not(.ccna-index) li{outline:0}
@@ -128,7 +135,7 @@ body.editing #pages .code-block[contenteditable="true"],body.editing #pages .asc
 .edit-spacer{height:12px;display:block}
 .manual-rule{width:fit-content;min-width:48px;max-width:45%;border:0;border-top:1px solid currentColor;margin:8px 0}
 body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--border),var(--border)) left center/24px 1px no-repeat}
-@media(max-width:700px){#editPanel{left:8px;right:8px;transform:none;overflow:auto;max-width:calc(100vw - 16px)}}
+@media(max-width:700px){#editPanel{left:8px;right:8px;transform:none;overflow:auto;max-width:calc(100vw - 16px)}#fileMenuList{position:fixed;left:8px;top:58px;min-width:180px;max-width:calc(100vw - 16px)}#fileMenuList button,#fileMenuList .file-menu-version{padding:10px 12px}}
 </style>
 <style id="v62-current-page-host">
 #v62-current-page-edit-host{
@@ -174,7 +181,7 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 <body>
 <!-- ReaderEditor GitHub: session persistence, GitHub/local files, HTML and plain-text support. -->
 <div id="toolbar"><button id="homeBtn" onclick="goHome()" title="Home / Index">⌂</button>
-<button id="githubBtn" title="GitHub">GitHub</button><button id="newBtn" title="New document">New</button><button id="localOpenBtn" title="Open a local file">Open</button><span id="versionFlag">ReaderEditor GitHub</span><span id="htmlModeBadge"></span>
+<div id="fileMenu"><button id="fileMenuBtn" title="File actions" aria-haspopup="true" aria-expanded="false">File</button><div id="fileMenuList" role="menu"><button id="githubBtn" role="menuitem" title="GitHub">GitHub</button><button id="newBtn" role="menuitem" title="New document">New</button><button id="localOpenBtn" role="menuitem" title="Open a local file">Open</button><span id="versionFlag" class="file-menu-version" role="status">ReaderEditor GitHub</span></div></div><span id="htmlModeBadge"></span>
 <button onclick="prev()" title="Previous page">←</button><button onclick="next()" title="Next page">→</button>
 <input id="jump" min="1" title="Enter page number" type="number" value="1"/>
 <span id="pageInfo">Page …</span>
@@ -182,15 +189,31 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 <button id="searchBtn" title="Search">⌕</button><button id="themeBtn" title="Dark/light mode">☾</button><button id="editBtn" title="Desktop editing mode">✎</button>
 <div id="searchBox"><div class="search-row"><input autocomplete="off" id="searchInput" placeholder="Search notes…"/><button id="searchPrev" title="Previous match">↑</button><button id="searchNext" title="Next match">↓</button></div></div>
 </div>
+<script id="fileMenuUi">
+(function(){
+  const menu=document.getElementById('fileMenu');
+  const button=document.getElementById('fileMenuBtn');
+  if(!menu||!button)return;
+  function close(){menu.classList.remove('open');button.setAttribute('aria-expanded','false');}
+  button.addEventListener('click',e=>{
+    e.stopPropagation();
+    const open=!menu.classList.contains('open');
+    if(open){menu.classList.add('open');button.setAttribute('aria-expanded','true');}
+    else close();
+  });
+  menu.querySelectorAll('#fileMenuList button').forEach(item=>item.addEventListener('click',()=>setTimeout(close,0)));
+  document.addEventListener('click',e=>{if(!menu.contains(e.target))close();});
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')close();});
+})();
+</script>
 <div id="editPanel" aria-label="Editing toolbar">
 <button class="edit-tool" data-cmd="bold"><b>B</b></button>
 <button class="edit-tool" data-cmd="underline"><u>U</u></button>
 <button class="edit-tool" data-cmd="italic"><i>I</i></button>
-<button class="edit-tool" id="spaceBtn">＋ Space</button>
-<button class="edit-tool" id="lineBtn">＋ Line</button>
 <button class="edit-tool" id="cliBtn" title="Convert selection to CLI (Ctrl+Alt+C)">CLI+</button><button class="edit-tool" id="cliMinusBtn" title="Convert CLI to normal text (Ctrl+Alt+N)">CLI-</button>
 <button class="edit-tool" id="saveBtn">Save</button>
 <button class="edit-tool" id="saveAsBtn">Save As</button>
+<button class="edit-tool" id="exitEditBtn" title="Exit edit mode">Exit</button>
 <span class="edit-status" id="editStatus">Edit mode</span>
 </div>
 <div id="githubPanel" aria-label="GitHub connection">
@@ -665,6 +688,7 @@ function goHome(){
   },true);
 
   editBtn.onclick=()=>setEditing(!editing);
+  document.getElementById('exitEditBtn').onclick=()=>exitEditing();
 
   document.addEventListener('selectionchange',()=>{if(editing)rememberSelection();});
 
@@ -677,18 +701,6 @@ function goHome(){
       markDirty();
     });
   });
-
-  document.getElementById('spaceBtn').onclick=()=>{
-    if(!restoreSelection())return;
-    document.execCommand('insertHTML',false,'<span class="edit-spacer" contenteditable="false"></span>');
-    rememberSelection();markDirty();
-  };
-
-  document.getElementById('lineBtn').onclick=()=>{
-    if(!restoreSelection())return;
-    document.execCommand('insertHTML',false,'<hr class="manual-rule" contenteditable="false">');
-    rememberSelection();markDirty();
-  };
 
   document.getElementById('cliBtn').onclick=()=>{
     if(!restoreSelection())return;
