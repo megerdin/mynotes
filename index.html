@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 
-<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title><script>const APP_VERSION='9.4.22';</script><style>
+<html lang="en-GB"><head><meta charset="utf-8"/><meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/><meta content="#1769aa" name="theme-color"/><title>ReaderEditor GitHub</title><script>const APP_VERSION='9.4.23';</script><style>
 :root{--bg:#f4f5f7;--paper:#fff;--text:#17202a;--muted:#667085;--accent:#1769aa;--border:#d9dee5;--toolbar:#ffffffee;--code:#f1f3f5;--shadow:0 2px 12px #00000018;--font:17px;--lh:1.48}
 [data-theme="dark"]{--bg:#101317;--paper:#171b21;--text:#e7eaf0;--muted:#9aa4b2;--accent:#66b3ff;--border:#303844;--toolbar:#171b21ee;--code:#0d1117;--shadow:0 2px 14px #00000055}
 *{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;min-height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
@@ -31,7 +31,9 @@ body.nav-hidden #reader{height:100dvh !important}
 #pages.content h2,#pages.content h3{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;break-after:avoid-column;column-break-after:avoid;font-weight:750;line-height:1.22;margin:.55em 0 .28em;color:var(--text)}
 #pages.content h2{font-size:1.12em}#pages.content h3{font-size:1.03em}
 #pages.content .section-rule{height:1px;line-height:1px;color:var(--border);margin:.25em 0 .45em;overflow:hidden}
-#pages.content .code-block,#pages.content .diagram{display:block;box-sizing:border-box;width:100%;max-width:100%;margin:.45em 0 .55em;padding:.65em .7em;border:1px solid var(--border);border-radius:8px;background:var(--code);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,"Liberation Mono","Noto Sans Mono",monospace;font-size:clamp(10px, 1.9vw, 13px);line-height:1.35;white-space:pre;overflow-x:auto;overflow-y:hidden;break-inside:avoid-column;column-break-inside:avoid;color:var(--text);tab-size:4}
+#pages.content .code-block,#pages.content .diagram{display:block;box-sizing:border-box;width:fit-content;max-width:100%;min-width:0;height:auto;min-height:0;margin:.45em 0 .55em;padding:.65em .7em;border:1px solid var(--border);border-radius:8px;background:var(--code);font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,"Liberation Mono","Noto Sans Mono",monospace;font-size:clamp(10px, 1.9vw, 13px);line-height:1.35;white-space:pre;overflow-x:auto;overflow-y:visible;break-inside:avoid-column;column-break-inside:avoid;color:var(--text);tab-size:4}
+#pages.content .code-block{width:fit-content;max-width:100%;min-width:0;height:auto;min-height:0;overflow-x:auto;overflow-y:visible}
+#pages.content .diagram{width:100%;max-width:100%;}
 #pages.content .diagram{font-size:var(--diagram-size,12px);line-height:1.15;text-align:left;padding:.55em .35em}
 #pages.content .github-plain-text{white-space:pre-wrap!important;overflow-wrap:normal;word-break:normal;break-inside:auto;column-break-inside:auto}
 @media(max-width:600px){#pages.content{font-size:var(--font);line-height:1.43}#pages.content p{margin-bottom:.32em}#pages.content h2{font-size:1.06em;margin:.42em 0 .24em}#pages.content h3{font-size:1em;margin:.38em 0 .22em}#pages.content .code-block{font-size:11px;padding:.55em .55em;line-height:1.32}#pages.content .diagram{font-size:var(--diagram-size,9px);line-height:1.08;padding:.45em .2em}}
@@ -177,6 +179,7 @@ body.editing #pages .edit-spacer{background:linear-gradient(to right,var(--borde
 #pages pre.github-plain-text.hljs{background:var(--code);color:var(--text);}
 </style>
 
+<!-- V9.4.23: CLI/code blocks shrink-wrap to content up to the page width; temporary edit hosts are stripped from persisted/saved HTML. -->
 </head>
 <body>
 <!-- ReaderEditor GitHub: session persistence, GitHub/local files, HTML and plain-text support. -->
@@ -562,6 +565,7 @@ function goHome(){
       'position:relative;'+
       'box-sizing:border-box;'+
       'width:'+q.width+'px;'+
+      'max-width:100%;'+
       'min-height:100%;'+
       'margin:0;'+
       'padding:'+q.cs.paddingTop+' '+q.cs.paddingRight+' '+q.cs.paddingBottom+' '+q.cs.paddingLeft+';'+
@@ -1575,6 +1579,25 @@ loadConfig();
     return btoa(binary);
   }
 
+  function cleanPagesMarkupForSave(){
+    const pages=document.getElementById('pages');
+    if(!pages)return '';
+    const root=pages.cloneNode(true);
+
+    // V62/V9.4.x creates this wrapper only while editing the current page.
+    // It must never become part of the user's document or persisted session.
+    root.querySelectorAll('#v62-current-page-edit-host').forEach(host=>{
+      const parent=host.parentNode;
+      if(!parent)return;
+      while(host.firstChild)parent.insertBefore(host.firstChild,host);
+      host.remove();
+    });
+
+    root.querySelectorAll('[contenteditable]').forEach(el=>el.removeAttribute('contenteditable'));
+    root.querySelectorAll('[spellcheck]').forEach(el=>el.removeAttribute('spellcheck'));
+    return root.innerHTML;
+  }
+
   function contentToSave(){
     const d=window.githubDocument;
     const pages=document.getElementById('pages');
@@ -1602,11 +1625,11 @@ loadConfig();
     if(sourcePages){
       // ReaderEditor/V70 documents already have a dedicated #pages content region.
       // Replace only that region so the original head, styles, and scripts survive.
-      sourcePages.innerHTML=pages.innerHTML;
+      sourcePages.innerHTML=cleanPagesMarkupForSave();
     }else if(doc.body){
       // Generic HTML: replace the visible body content but preserve original scripts.
       const scripts=Array.from(doc.body.querySelectorAll('script')).map(x=>x.cloneNode(true));
-      doc.body.innerHTML=pages.innerHTML;
+      doc.body.innerHTML=cleanPagesMarkupForSave();
       scripts.forEach(x=>doc.body.appendChild(x));
     }else{
       throw new Error('HTML document has no body');
@@ -1939,10 +1962,10 @@ function currentContent(){
     const doc=new DOMParser().parseFromString(d.raw||'','text/html');
     const sourcePages=doc.querySelector('#pages');
     if(sourcePages){
-      sourcePages.innerHTML=pages.innerHTML;
+      sourcePages.innerHTML=cleanPagesMarkupForSave();
     }else if(doc.body){
       const scripts=Array.from(doc.body.querySelectorAll('script')).map(x=>x.cloneNode(true));
-      doc.body.innerHTML=pages.innerHTML;
+      doc.body.innerHTML=cleanPagesMarkupForSave();
       scripts.forEach(x=>doc.body.appendChild(x));
     }else{
       return d.raw||'';
